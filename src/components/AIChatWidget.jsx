@@ -20,7 +20,6 @@ function renderMarkdown(text) {
   if (!text) return text
   const parts = []
   let key = 0
-  // Match **bold** and ~~strikethrough~~
   const regex = /\*\*(.+?)\*\*|~~(.+?)~~/g
   let match, lastIndex = 0
   while ((match = regex.exec(text)) !== null) {
@@ -37,7 +36,7 @@ function renderMarkdown(text) {
   return parts.length > 0 ? parts : text
 }
 
-// Icons as inline SVG
+// Icons
 const SparkleIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z"/>
@@ -76,7 +75,13 @@ const ChevronRightIcon = () => (
   </svg>
 )
 
-// Product Carousel with arrow buttons
+const StarIcon = () => (
+  <svg viewBox="0 0 24 24" fill="#e8b966" stroke="none" width="10" height="10" style={{display:'inline',verticalAlign:'middle'}}>
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+  </svg>
+)
+
+// Product Carousel
 function ProductCarousel({ products, onProductClick, formatPrice }) {
   const scrollRef = useRef(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -92,10 +97,8 @@ function ProductCarousel({ products, onProductClick, formatPrice }) {
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    // Delay check to allow layout to complete
     const timer = setTimeout(checkScroll, 100)
     el.addEventListener('scroll', checkScroll, { passive: true })
-    // Watch for size changes
     const ro = new ResizeObserver(checkScroll)
     ro.observe(el)
     return () => {
@@ -129,13 +132,29 @@ function ProductCarousel({ products, onProductClick, formatPrice }) {
             onClick={(e) => { e.preventDefault(); onProductClick(p.id) }}
             href={`/product/${p.id}`}
           >
+            {/* Badge overlay */}
+            {p.badge && (
+              <span className={`ai-chat-product-badge ${p.badge === 'SALE' ? 'sale' : p.badge === 'NEW' ? 'new' : 'hot'}`}>
+                {p.badge === 'SALE' ? '🏷️ Sale' : p.badge === 'NEW' ? '🆕 Mới' : p.badge}
+              </span>
+            )}
             {p.image && (
               <img className="ai-chat-product-img" src={p.image} alt={p.name} loading="lazy" />
             )}
             <div className="ai-chat-product-info">
               {p.brand && <p className="brand">{p.brand}</p>}
               <p className="name">{p.name}</p>
-              <p className="price">{formatPrice(p.price)}</p>
+              <div className="ai-chat-product-bottom">
+                <p className="price">{formatPrice(p.price)}</p>
+                {p.rating && (
+                  <span className="ai-chat-product-rating">
+                    <StarIcon /> {Number(p.rating).toFixed(1)}
+                  </span>
+                )}
+              </div>
+              {p.old_price && Number(p.old_price) > Number(p.price) && (
+                <p className="old-price">{formatPrice(p.old_price)}</p>
+              )}
             </div>
           </a>
         ))}
@@ -167,6 +186,7 @@ export default function AIChatWidget() {
   const [loading, setLoading] = useState(false)
   const [networkError, setNetworkError] = useState('')
   const [lastFailedMessage, setLastFailedMessage] = useState('')
+  const [unreadCount, setUnreadCount] = useState(0)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const navigate = useNavigate()
@@ -176,9 +196,12 @@ export default function AIChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
 
-  // Focus input when panel opens
+  // Focus input when panel opens; clear unread count
   useEffect(() => {
-    if (isOpen) setTimeout(() => inputRef.current?.focus(), 350)
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 350)
+      setUnreadCount(0)
+    }
   }, [isOpen])
 
   const requestChat = async (payload, retries = REQUEST_RETRY_COUNT) => {
@@ -186,7 +209,7 @@ export default function AIChatWidget() {
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
     try {
-      const res = await fetch(`${API}/chat`, {
+      const res = await fetch(`${API}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -226,11 +249,16 @@ export default function AIChatWidget() {
         history: newMessages.slice(-10),
       })
 
-      setMessages(prev => [...prev, {
+      const assistantMsg = {
         role: 'assistant',
         content: data.reply,
         products: data.suggestedProducts || []
-      }])
+      }
+      setMessages(prev => [...prev, assistantMsg])
+
+      if (!isOpen) {
+        setUnreadCount(prev => prev + 1)
+      }
     } catch {
       setLastFailedMessage(userMsg)
       setNetworkError('Kết nối đang không ổn định. Bạn có thể thử gửi lại ngay.')
@@ -272,6 +300,9 @@ export default function AIChatWidget() {
         title="Chat với AI tư vấn"
       >
         {isOpen ? <CloseIcon /> : <SparkleIcon />}
+        {!isOpen && unreadCount > 0 && (
+          <span className="ai-chat-unread-badge">{unreadCount}</span>
+        )}
       </button>
 
       {/* Chat Panel */}
@@ -285,7 +316,10 @@ export default function AIChatWidget() {
               </div>
               <div className="ai-chat-header-text">
                 <h4>LUMIÈRE AI</h4>
-                <p>Chuyên gia tư vấn nước hoa ✨</p>
+                <p>
+                  <span className="ai-chat-online-dot"></span>
+                  Chuyên gia tư vấn nước hoa ✨
+                </p>
               </div>
             </div>
             <div className="ai-chat-header-actions">
@@ -329,8 +363,23 @@ export default function AIChatWidget() {
 
             {messages.map((msg, i) => (
               <div key={i} className={`ai-chat-msg ${msg.role}`}>
+                {msg.role === 'assistant' && (
+                  <div className="ai-chat-msg-avatar">
+                    <SparkleIcon />
+                  </div>
+                )}
                 <div className="ai-chat-msg-bubble">
-                  <div style={{ whiteSpace: 'pre-wrap' }}>{typeof msg.content === 'string' ? msg.content.split('\n').map((line, li) => <span key={li}>{renderMarkdown(line)}{li < msg.content.split('\n').length - 1 && <br/>}</span>) : msg.content}</div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>
+                    {typeof msg.content === 'string'
+                      ? msg.content.split('\n').map((line, li) => (
+                          <span key={li}>
+                            {renderMarkdown(line)}
+                            {li < msg.content.split('\n').length - 1 && <br/>}
+                          </span>
+                        ))
+                      : msg.content
+                    }
+                  </div>
 
                   {/* Product Carousel */}
                   {msg.products && msg.products.length > 0 && (
@@ -347,6 +396,9 @@ export default function AIChatWidget() {
             {/* Typing indicator */}
             {loading && (
               <div className="ai-chat-typing">
+                <div className="ai-chat-msg-avatar">
+                  <SparkleIcon />
+                </div>
                 <div className="ai-chat-typing-dots">
                   <span></span><span></span><span></span>
                 </div>

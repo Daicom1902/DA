@@ -1,15 +1,306 @@
 import { Router } from 'express'
 import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import pool from '../db.js'
 
 const router = Router()
 
-// ── Khởi tạo Claude client ──────────────────────────────────────────────
-function getClient() {
+// ── Khởi tạo các AI client ──────────────────────────────────────────────
+function getClaudeClient() {
   const key = process.env.ANTHROPIC_API_KEY
   if (!key) return null
   return new Anthropic({ apiKey: key })
 }
+
+function getGeminiClient() {
+  const key = process.env.GOOGLE_AI_API_KEY
+  if (!key) return null
+  return new GoogleGenerativeAI(key)
+}
+
+// ── Gọi Google Gemini AI (không web search) ─────────────────────────────
+async function callGemini(systemPrompt, messages) {
+  const genAI = getGeminiClient()
+  if (!genAI) return null
+
+  const history = messages.slice(0, -1).map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.content }]
+  }))
+
+  const lastUserMsg = messages[messages.length - 1]?.content || ''
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    systemInstruction: systemPrompt,
+    generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
+  })
+
+  const chat = model.startChat({ history })
+  const result = await chat.sendMessage(lastUserMsg)
+  return result.response.text()
+}
+
+// ── Gọi Google Gemini AI + Google Search (có tra cứu web) ───────────────
+async function callGeminiWithSearch(userMessage, history = []) {
+  const genAI = getGeminiClient()
+  if (!genAI) return null
+
+  const model = genAI.getGenerativeModel(
+    {
+      model: 'gemini-2.5-flash',
+      tools: [{ googleSearch: {} }],
+      generationConfig: { maxOutputTokens: 1500, temperature: 0.7 }
+    },
+    { apiVersion: 'v1beta' }
+  )
+
+  // Tạo nội dung chat kết hợp lịch sử + tin nhắn mới
+  const contents = []
+
+  // Thêm lịch sử hội thoại (tối đa 6 tin nhắn gần nhất)
+  for (const msg of history.slice(-6)) {
+    contents.push({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    })
+  }
+
+  // Thêm system context vào message của user (vì tool mode không hỗ trợ systemInstruction)
+  const messageWithContext = `Bạn là trợ lý AI của cửa hàng nước hoa LUMIÈRE. Hãy trả lời bằng tiếng Việt, thân thiện và chính xác.
+
+Câu hỏi của khách: ${userMessage}
+
+Hãy tra cứu thông tin mới nhất từ internet và trả lời đầy đủ, hữu ích. Nếu câu hỏi liên quan đến nước hoa của cửa hàng LUMIÈRE, hãy đề cập đến việc khách có thể xem sản phẩm tại cửa hàng.`
+
+  contents.push({ role: 'user', parts: [{ text: messageWithContext }] })
+
+  try {
+    const result = await model.generateContent({ contents })
+    const response = result.response
+    const text = response.text()
+
+    // Lấy nguồn tham chiếu nếu có
+    const groundingMetadata = response.candidates?.[0]?.groundingMetadata
+    const searchQueries = groundingMetadata?.webSearchQueries || []
+
+    console.log(`🔍 Gemini Search queries: ${searchQueries.join(', ')}`)
+    return text
+  } catch (err) {
+    // Một số model không hỗ trợ googleSearch → fallback về callGemini thông thường
+    console.error('⚠️  Gemini Search lỗi:', err.message)
+    return null
+  }
+}
+
+// ── Gọi Claude AI ───────────────────────────────────────────────────────
+async function callClaude(systemPrompt, messages) {
+  const client = getClaudeClient()
+  if (!client) return null
+
+  const claudeMessages = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.content
+  }))
+
+  const response = await client.messages.create({
+    model: 'claude-3-haiku-20240307',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: claudeMessages
+  })
+
+  return response.content[0]?.text || ''
+}
+
+// ── Gọi Groq AI (Llama 3.3 70B) ────────────────────────────────────────
+function getGroqClient() {
+  const key = process.env.GROQ_API_KEY
+  if (!key) return null
+  return new Groq({ apiKey: key })
+}
+
+async function callGroq(systemPrompt, messages) {
+  const client = getGroqClient()
+  if (!client) return null
+
+  const groqMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: typeof msg.content === 'string' ? msg.content : ''
+    }))
+  ]
+
+  const completion = await client.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: groqMessages,
+    max_tokens: 1024,
+    temperature: 0.7,
+  })
+
+  return completion.choices[0]?.message?.content || ''
+}
+
+// ── Gọi Groq AI + Tavily Search cho knowledge queries ────────────────────
+async function callGroqWithKnowledge(systemPrompt, messages, userMessage) {
+  const client = getGroqClient()
+  if (!client) return null
+
+  // Tạo system prompt mở rộng cho câu hỏi kiến thức
+  const knowledgeSystemPrompt = `Bạn là chuyên gia nước hoa AI của cửa hàng LUMIÈRE. 
+Hãy trả lời câu hỏi bằng tiếng Việt, chi tiết và hữu ích dựa trên kiến thức chuyên sâu của bạn về nước hoa.
+Sau khi trả lời kiến thức, hãy gợi ý: "Bạn có muốn tôi tư vấn sản phẩm nước hoa phù hợp không? 💐"`
+
+  const groqMessages = [
+    { role: 'system', content: knowledgeSystemPrompt },
+    ...messages.slice(0, -1).map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'assistant',
+      content: typeof msg.content === 'string' ? msg.content : ''
+    })),
+    { role: 'user', content: userMessage }
+  ]
+
+  const completion = await client.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: groqMessages,
+    max_tokens: 1500,
+    temperature: 0.7,
+  })
+
+  return completion.choices[0]?.message?.content || ''
+}
+
+// ── Phát hiện câu hỏi kiến thức (cần tìm kiếm web) ──────────────────────
+function removeDiacritics(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D')
+}
+
+function detectKnowledgeQuery(message) {
+  const lower = message.toLowerCase().trim()
+  const noMark = removeDiacritics(lower) // "EDP khác EDT" → "EDP khac EDT"
+
+  // === PATTERN 1: Câu hỏi "là gì / là gì vậy / là thế nào" ===
+  const isWhatIs = /(?:là gì|la gi|là thế nào|la the nao|nghĩa là|nghi?a la|định nghĩa|khai niem|khái niệm)/i.test(noMark)
+
+  // === PATTERN 2: So sánh / Phân biệt ===
+  const isCompare = /(?:khác nhau|khac nhau|so sánh|so sanh|phân biệt|phan biet|khác gì|khac gi|difference|compare|versus|\bvs\b|better than|nào tốt hơn|nao tot hon)/i.test(noMark)
+
+  // === PATTERN 3: Câu hỏi kỹ thuật nước hoa ===
+  const isPerfumeTech = /(?:\bedt\b|\bedp\b|\bedc\b|\beau de\b|parfum|cologne|nồng độ|nong do|top note|middle note|base note|huong dau|huong giua|huong cuoi|sillage|projection|longevity|luu huong|lưu hương|kim tu thap|pyramid)/i.test(noMark)
+
+  // === PATTERN 4: Thành phần, nguyên liệu ===
+  const isIngredient = /(?:được làm|duoc lam|thành phần|thanh phan|nguyên liệu|nguyen lieu|chiết xuất|chiet xuat|ingredient|formula|made of|cau tao|cấu tạo)/i.test(noMark)
+
+  // === PATTERN 5: Lịch sử, nguồn gốc thương hiệu ===
+  const isHistory = /(?:lịch sử|lich su|nguồn gốc|nguon goc|xuất xứ|xuat xu|ra đời|ra doi|sáng lập|sang lap|history|origin|founder|founded|khi nao ra|nam nao)/i.test(noMark)
+
+  // === PATTERN 6: Hướng dẫn sử dụng ===
+  const isHowTo = /(?:cách xịt|cach xit|cách dùng|cach dung|xịt như thế nào|xit nhu the nao|bảo quản|bao quan|để được bao lâu|de duoc bao lau|how to use|how long|bao lau|lam sao de|làm sao để)/i.test(noMark)
+
+  // === PATTERN 7: Hỏi "tại sao" về nước hoa ===
+  const isWhyHow = /(?:tại sao|tai sao|vì sao|vi sao|tac dung|tác dụng|ảnh hưởng|anh huong|why does|how does)/i.test(noMark)
+
+  // === PATTERN 8: Xu hướng, top thế giới ===
+  const isTrend = /(?:xu hướng|xu huong|trend|nổi tiếng nhất thế giới|noi tieng nhat|iconic|famous|huong nao pho bien|hương nào phổ biến)/i.test(noMark)
+
+  // === PATTERN 9: Các thuật ngữ nước hoa đặc biệt ===
+  const isPerfumeTerm = /(?:\boud\b|\bamber\b|ambergris|musk|aldehyde|chypre|fougere|gourmand|oriental|aromatic)/i.test(noMark)
+
+  // === PATTERN 10: Câu hỏi dạng "?" rõ ràng kèm từ kỹ thuật ===
+  const hasQuestionMark = lower.includes('?') || lower.includes('ko') || lower.endsWith(' k')
+
+  const isKnowledge = isWhatIs || isCompare || isPerfumeTech || isIngredient ||
+    isHistory || isHowTo || isWhyHow || isTrend || isPerfumeTerm
+
+  // NGOẠI LỆ: Nếu rõ ràng là hỏi mua/tư vấn → ưu tiên product mode
+  const isExplicitProduct = /(?:tư vấn|tu van|gợi ý|goi y|nên mua|nen mua|muốn mua|muon mua|recommend|suggest)/i.test(noMark)
+
+  const result = isKnowledge && !isExplicitProduct
+
+  if (result) {
+    const matched = [isWhatIs && 'is-what', isCompare && 'compare', isPerfumeTech && 'tech',
+      isIngredient && 'ingredient', isHistory && 'history', isHowTo && 'how-to',
+      isWhyHow && 'why', isTrend && 'trend', isPerfumeTerm && 'term'].filter(Boolean)
+    console.log(`🧠 detectKnowledgeQuery: TRUE [${matched.join(', ')}] - "${message}"`)
+  }
+
+  return result
+}
+
+// ── Điều phối AI: thông minh theo loại câu hỏi ─────────────────────────
+// Chuỗi ưu tiên:
+//   Knowledge: Gemini+Search → Groq (knowledge mode) → Gemini thường → Claude → Groq thường
+//   Product:   Gemini → Claude → Groq → keyword search
+async function callAI(systemPrompt, messages, userMessage = '') {
+  const isKnowledge = detectKnowledgeQuery(userMessage)
+
+  if (isKnowledge) {
+    console.log(`🌐 Phát hiện câu hỏi kiến thức — dùng AI + web knowledge`)
+  }
+
+  // ── 1. Gemini (ưu tiên nhất) ──
+  if (process.env.GOOGLE_AI_API_KEY) {
+    try {
+      let reply
+      if (isKnowledge) {
+        console.log('🤖 Gọi Gemini + Google Search...')
+        reply = await callGeminiWithSearch(userMessage, messages.slice(0, -1))
+        if (!reply) {
+          console.log('🤖 Fallback Gemini thường...')
+          reply = await callGemini(systemPrompt, messages)
+        }
+      } else {
+        console.log('🤖 Gọi Gemini AI (product mode)...')
+        reply = await callGemini(systemPrompt, messages)
+      }
+      if (reply) {
+        console.log(`✅ Gemini OK (${isKnowledge ? 'search' : 'product'} mode)`)
+        return { reply, provider: 'gemini', mode: isKnowledge ? 'search' : 'product' }
+      }
+    } catch (err) {
+      console.error('⚠️  Gemini lỗi:', err.message.substring(0, 120))
+    }
+  }
+
+  // ── 2. Claude ──
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      console.log('🤖 Gọi Claude AI...')
+      const reply = await callClaude(systemPrompt, messages)
+      if (reply) {
+        console.log('✅ Claude OK')
+        return { reply, provider: 'claude', mode: isKnowledge ? 'search' : 'product' }
+      }
+    } catch (err) {
+      console.error('⚠️  Claude lỗi:', err.message.substring(0, 120))
+    }
+  }
+
+  // ── 3. Groq / Llama (backup miễn phí) ──
+  if (process.env.GROQ_API_KEY) {
+    try {
+      let reply
+      if (isKnowledge) {
+        console.log('🤖 Gọi Groq Llama (knowledge mode)...')
+        reply = await callGroqWithKnowledge(systemPrompt, messages, userMessage)
+      } else {
+        console.log('🤖 Gọi Groq Llama (product mode)...')
+        reply = await callGroq(systemPrompt, messages)
+      }
+      if (reply) {
+        console.log(`✅ Groq Llama OK (${isKnowledge ? 'knowledge' : 'product'} mode)`)
+        return { reply, provider: 'groq', mode: isKnowledge ? 'search' : 'product' }
+      }
+    } catch (err) {
+      console.error('⚠️  Groq lỗi:', err.message.substring(0, 120))
+    }
+  }
+
+  return null
+}
+
 
 // ── Lấy sản phẩm từ DB làm context cho AI ──────────────────────────────
 async function getProductContext() {
@@ -62,123 +353,104 @@ function formatProductsForPrompt(products) {
 
 // ── System prompt ────────────────────────────────────────────────────────
 function buildSystemPrompt(productsText) {
-  return `Bạn là chuyên gia tư vấn nước hoa AI tại cửa hàng LUMIÈRE — một thương hiệu nước hoa cao cấp.
+  return `Bạn là trợ lý AI đa năng của cửa hàng nước hoa LUMIÈRE — chuyên gia về nước hoa cao cấp.
+
+Bạn có THỂ LÀM ĐƯỢC 2 VIỆC:
+① Tư vấn và gợi ý sản phẩm từ cửa hàng LUMIÈRE
+② Trả lời câu hỏi kiến thức về nước hoa (thành phần, lịch sử, kỹ thuật, xu hướng...)
 
 ═══════════════════════════════════════════════════════════════════════════
-🎯 QUY TẮC VÀNG: CỬA HÀNG LUÔN HỎI → HIỂU RÕ → RỒI GỢI Ý
+🎯 PHÂN LOẠI CÂU HỎI VÀ CÁCH XỬ LÝ
 ═══════════════════════════════════════════════════════════════════════════
 
-⚡ QUYẾT ĐỊNH FLOW:
-IF (yêu cầu RÕNG ràng + đủ context) {
+📦 [LOẠI 1] CÂU HỎI SẢN PHẨM / TƯ VẤN MUA
+  - "Tư vấn nước hoa nữ hương hoa"
+  - "Gợi ý nước hoa đi làm dưới 1 triệu"
+  - "Nước hoa bán chạy nhất"
+  → Dùng danh sách sản phẩm bên dưới để tư vấn
+  → Quy trình: Hỏi thêm nếu chưa rõ → Gợi ý 2-4 sản phẩm phù hợp
+
+📚 [LOẠI 2] CÂU HỎI KIẾN THỨC / TÌM HIỂU
+  - "EDP khác EDT như thế nào?"
+  - "Hương Oud là gì?"
+  - "Cách xịt nước hoa đúng cách"
+  - "Lịch sử thương hiệu Chanel"
+  - "Nước hoa để lâu bao nhiêu năm?"
+  → Trả lời từ kiến thức chuyên môn
+  → Ngắn gọn, dễ hiểu, có thể có bullet points
+  → Cuối bài có thể gợi ý: "Bạn muốn mình tư vấn sản phẩm phù hợp không? 💐"
+
+═══════════════════════════════════════════════════════════════════════════
+QUY TẮC TƯ VẤN SẢN PHẨM
+═══════════════════════════════════════════════════════════════════════════
+
+⚡ QUYẾT ĐỊNH FLOW (chỉ khi là câu hỏi sản phẩm):
+IF (yêu cầu RÕ RÀNG + đủ context) {
   → Confirm lại + Gợi ý products
-} ELSE IF (yêu cầu MỜ HỒ / HỌC THÊM / VỀ đều có thể) {
-  → HỎI THÊM để làm rõ (TỪ 2-3 CÂU HỎI LIÊN QUAN)
-  → Chỉ sau khi rõ ý mới gợi ý
+} ELSE IF (yêu cầu MỜ HỒ) {
+  → HỎI THÊM 2-3 câu để làm rõ
 } ELSE IF (chỉ mention "giá" mà không có context khác) {
-  → ĐỪNG gợi ý loạn, mà hỏi: "Ngoài giá, bạn quan tâm gì nữa?"
-  → Hỏi về: giới tính, scent, occasion/mục đích sử dụng
+  → Hỏi: "Ngoài giá, bạn quan tâm gì nữa?"
 
-═══════════════════════════════════════════════════════════════════════════
-NGUYÊN TẮC PHÂN TÍCH VÀ TRẢ LỜI
-═══════════════════════════════════════════════════════════════════════════
+🎯 PHÂN TÍCH INTENT:
+- "Nước hoa cho bạn gái" → Tìm sản phẩm NỮ, romantic
+- "Nước hoa không quá đắt" → Giá rẻ + chất lượng
+- "Nước hoa tươi mát mùa hè" → Fresh/Aquatic scent
+- "Giá" (một mình) → KHÔNG RÕ, phải hỏi thêm
 
-🎯 PHÂN TÍCH INTENT CHÍNH XÁCH:
-- Đọc kỹ câu hỏi để hiểu đúng TRỌNG TÂM (người dùng muốn gì)
-- Ví dụ 1: "Nước hoa cho bạn gái" → Intent: Tìm sản phẩm NỮ, mục đích: QUẶN HỌ (romantic)
-- Ví dụ 2: "Nước hoa không quá đắt" → Intent: Giá rẻ, nhưng cần CHẤT LƯỢNG
-- Ví dụ 3: "Nước hoa tươi mát cho mùa hè" → Intent: Mùa hè + Scent Fresh/Aquatic
-- Ví dụ 4: "Giá" (chỉ có vậy) → Intent: KHÔNG RÕ, phải hỏi thêm
-
-💡 CẨN THẬN GẪY MẪM & GIẢ ĐỊNH:
-- KHÔNG tự thêm yêu cầu không có trong câu hỏi (VD: "nước hoa nam" ≠ "nước hoa cho người yêu")
-- KHÔNG giả định người dùng muốn "cao cấp" nếu không nói
-- KHÔNG bỏ qua từ khóa nhỏ (VD: "không quá đắt", "nhẹ nhàng")
-- KHÔNG gợi ý sản phẩm khi CHƯA HIỂU RÕ nhu cầu (dù có tìm được products)
-
-📍 CẨU TRẢ LỜI TẬP TRUNG VÀO TRỌNG TÂM:
-- Chỉ gợi ý KHOẢNG 2-4 sản phẩm PHẦN PHƠI NHẤT với câu hỏi
-- Lý giải TẠI SAO mỗi sản phẩm phù hợp (dựa vào scent, gender, price, occasion)
-- Không lãng phí thời gian cho sản phẩm không liên quan
-
-DANH SÁCH SẢN PHẨM CỬA HÀNG:
+DANH SÁCH SẢN PHẨM CỬA HÀNG LUMIÈRE:
 ${productsText}
 
 ═══════════════════════════════════════════════════════════════════════════
-CÁC TÌNH HUỐNG PHỔ BIẾN & CÁCH XỬ LÝ
+CÁC TÌNH HUỐNG TƯ VẤN SẢN PHẨM
 ═══════════════════════════════════════════════════════════════════════════
 
-1️⃣ TƯ VẤN CHUNG HOẶC YÊU CẦU MỜ HỒ (CẦN HỎI THÊM)
+1️⃣ TƯ VẤN MỜ HỒ → HỎI THÊM
    Q: "Nước hoa gì cho mọi lúc?"
-   Q: "Chat lung tung, mình muốn nước hoa mà không biết"
-   → TRƯỚC TIÊN: Hỏi thêm để làm rõ
-   → Questions: "Bạn là nam hay nữ?", "Thích hương gì?", "Để làm gì?"
-   → CHỈ SAU ĐÓ gợi ý 2-3 sản phẩm đa năng
+   → Hỏi: "Bạn là nam hay nữ?", "Thích hương gì?", "Dùng cho dịp nào?"
 
-1.5️⃣ BUDGET/GIÁ LÀ TRỌNG TÂM (HỎI THÊM hoặc GỢI Ý)
-   Q: "Giá"
-   Q: "Giá rẻ"
-   Q: "Dưới 500k"
-   → PHÂN TÍCH: User quan tâm GIÁ
-   → Hỏi thêm: "Ngoài giá, bạn là nam hay nữ? Thích hương gì?"
-   → NHƯNG nếu user nôn nả, cứ gợi ý sản phẩm GIẺ NHẤT trong khoảng giá đó
-   → KHÔNG gợi ý sản phẩm nổi bật/đắt tiền nếu user hỏi giá rẻ!
-
-2️⃣ TÌM SCENT CỤ THỂ (Đủ rõ → GỢI Ý NGAY)
+2️⃣ TÌM SCENT CỤ THỂ → GỢI Ý NGAY
    Q: "Tôi muốn hương hoa nhẹ nhàng, không nồng"
-   → PHÂN TÍCH: Scent = Floral, Strength = Light/Fresh
-   → Gợi ý: Sản phẩm Floral với description "tươi mát", "nhẹ"
-   → KHÔNG gợi ý những sản phẩm "nồng nàn", "mạnh"
+   → Gợi ý sản phẩm Floral, Light/Fresh
 
-3️⃣ BUDGET HẠCH CHẼ (Đủ rõ intent → GỢI Ý)
-   Q: "Nước hoa giá dưới 1 triệu nhưng chất lượng tốt"
-   → PHÂN TÍCH: Price < 1M, Quality = High rating (4.0+)
-   → Gợi ý: Sản phẩm trong khoảng giá + rating cao
-   → LỸ GIẢI: "Mặc dù giá rẻ nhưng có rating 4.5/5"
+3️⃣ BUDGET HẠCH CHẼ → GỢI Ý + LÝ GIẢI
+   Q: "Nước hoa giá dưới 1 triệu"
+   → Gợi ý trong khoảng giá + rating cao + giải thích lý do
 
-4️⃣ MỤC ĐÍCH SỬ DỤNG (Đủ rõ → GỢI Ý)
+4️⃣ MỤC ĐÍCH → GỢI Ý PHÙ HỢP
    Q: "Nước hoa cho bữa hẹn hò"
-   → PHÂN TÍCH: Occasion = Date/Romantic, scent = Seductive/Sweet
-   → Gợi ý: Sản phẩm quyến rũ, gợi cảm, warm tones
-   → KHÔNG: Nước hoa công sở, citrus nhẹ nhàng
+   → Sản phẩm quyến rũ, warm/sweet
 
-5️⃣ SO SÁNH GIỮA NHIỀU SẢN PHẨM
-   Q: "Giữa A và B, cái nào tốt hơn?"
-   → PHÂN TÍCH: Tại sao người dùng so sánh? Tiêu chí gì? Budget?
-   → TRẢ LỜI: So sánh rõ ràng về: Scent, Price, Quality, Best for...
-   → Giới thiệu cái phù hợp hơn DỰA VÀO CÂU HỎI
+5️⃣ SO SÁNH SẢN PHẨM
+   Q: "A vs B, cái nào tốt hơn?"
+   → So sánh về scent, price, longevity, best for...
 
 ═══════════════════════════════════════════════════════════════════════════
 FORMAT & PHONG CÁCH
 ═══════════════════════════════════════════════════════════════════════════
 
-✏️ CẤU TRÚC TRƯỜI LỜI KHOẢNG 2 LOẠI:
+✏️ TƯ VẤN SẢN PHẨM:
+1. Confirm hiểu yêu cầu (ngắn)
+2. 2-4 gợi ý với tên + nét nổi bật
+3. Lý giải TẠI SAO phù hợp
+4. Hỏi có thắc mắc thêm không?
 
-[LOẠI A] - KHI HỎI THÊM:
-1. Xác nhận bạn đã nghe
-2. Hỏi 2-3 câu để làm rõ (liên quan đến scent, gender, occasion, purpose)
-3. "Rồi mình sẽ tư vấn cho bạn những sản phẩm tuyệt vời nhất! 💫"
-
-[LOẠI B] - KHI GỢI Ý:
-1. Confirm lại hiểu rõ yêu cầu của khách NGẮN GỌN
-2. 2-4 gợi ý sản phẩm với tên và nét nổi bật
-3. Lý giải TẠI SAO phù hợp (dựa vào scent, gender, price, occasion)
-4. Hỏi khách có thắc mắc thêm không?
+✏️ KIẾN THỨC:
+1. Giải thích rõ ràng, có cấu trúc
+2. Dùng ví dụ thực tế nếu cần
+3. Cuối bài kết nối về sản phẩm nếu phù hợp
 
 🎨 PHONG CÁCH VIẾT:
 - Ngôn ngữ: Tiếng Việt, thân thiện, chuyên nghiệp
-- Độ dài: Ngắn gọn, không lặp lại (tránh chat dài)
-- Tone: Tư vấn yêu thương, không áp đặt
-- Emoji: Dùng phù hợp để tăng tính kết nối ✨💐🌸
+- Độ dài: Ngắn gọn, súc tích — tránh viết quá dài
+- Tone: Chuyên gia yêu thương, không áp đặt
+- Emoji: Dùng phù hợp ✨💐🌸
 
-⚠️ NHỮNG ĐIỀU TUYỆT ĐỐI KHÔNG LÀM:
-- KHÔNG tự bịa sản phẩm hoặc thông tin không có
-- KHÔNG trả lời ngoài chủ đề nước hoa
-- KHÔNG gợi ý sản phẩm "tương tự" nếu cửa hàng không có
-- KHÔNG bỏ qua yêu cầu cụ thể của khách (VD: "không nồng" → phải tìm sản phẩm "nhẹ")
-- KHÔNG gợi ý quá 4 sản phẩm (khách sẽ bối rối)
-- 🔴 KHÔNG gợi ý khi intent MỜ HỒ/LUNG TUNG (phải hỏi trước!)
-- 🔴 KHÔNG chỉ nhìn vào giá rồi gợi ý product tùy tiện
-- 🔴 KHÔNG bỏ qua message KHÔNG RÕ để gợi ý products bất kể`
+⚠️ TUYỆT ĐỐI KHÔNG:
+- Tự bịa sản phẩm không có trong danh sách
+- Gợi ý quá 4 sản phẩm một lúc
+- Gợi ý sản phẩm khi câu hỏi MỜ HỒ
+- Trả lời về chủ đề KHÔNG LIÊN QUAN đến nước hoa / LUMIÈRE`
 }
 
 // ── Fallback: tìm sản phẩm theo keyword khi không có AI ─────────────────
@@ -938,65 +1210,69 @@ router.post('/', async (req, res) => {
     const sessionContext = getSessionContext(sessionId)
     const mergedIntent = mergeIntentWithSession(currentIntent, sessionContext)
 
-    // ── Thử dùng Claude AI trước ──
-    const client = getClient()
-    if (client) {
-      try {
-        const products = await getProductContext()
-        const productsText = formatProductsForPrompt(products)
-        let systemPrompt = buildSystemPrompt(productsText) + buildSessionContextPrompt(sessionContext)
-        
-        // Check if message is vague and enhance prompt if needed
-        if (isMessageVague(message, mergedIntent)) {
-          systemPrompt = buildVagueMessagePrompt(systemPrompt)
-        }
+    // ── Xây dựng system prompt ──
+    const products = await getProductContext()
+    const productsText = formatProductsForPrompt(products)
+    let systemPrompt = buildSystemPrompt(productsText) + buildSessionContextPrompt(sessionContext)
 
-        const messages = []
-        for (const msg of history.slice(-10)) {
-          messages.push({
-            role: msg.role === 'user' ? 'user' : 'assistant',
-            content: msg.content
-          })
-        }
-        messages.push({ role: 'user', content: message.trim() })
-
-        const response = await client.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          system: systemPrompt,
-          messages
-        })
-
-        const reply = response.content[0]?.text || ''
-
-        const productIdMatches = reply.match(/\[PRODUCT:(\d+)\]/g) || []
-        const suggestedIds = productIdMatches.map(m => Number(m.match(/\d+/)[0]))
-
-        let suggestedProducts = []
-        if (suggestedIds.length > 0) {
-          const placeholders = suggestedIds.map(() => '?').join(',')
-          const [rows] = await pool.query(`
-            SELECT p.id, p.name, p.slug, p.price, p.old_price, p.image, p.badge, p.rating,
-                   b.name AS brand
-            FROM products p
-            LEFT JOIN brands b ON b.id = p.brand_id
-            WHERE p.id IN (${placeholders}) AND p.is_active = 1
-          `, suggestedIds)
-          suggestedProducts = rows
-        }
-
-        const cleanReply = reply.replace(/\[PRODUCT:\d+\]/g, '').replace(/\n{3,}/g, '\n\n').trim()
-
-        updateSessionContext(sessionId, currentIntent, message)
-
-        return res.json({ reply: cleanReply, suggestedProducts })
-      } catch (aiErr) {
-        console.error('Claude API error, falling back to keyword search:', aiErr.message)
-        // Fall through to keyword-based search
-      }
+    if (isMessageVague(message, mergedIntent)) {
+      systemPrompt = buildVagueMessagePrompt(systemPrompt)
     }
 
-    // ── Fallback: tìm sản phẩm theo keyword ──
+    // ── Chuẩn bị message list ──
+    const aiMessages = []
+    for (const msg of history.slice(-10)) {
+      aiMessages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: typeof msg.content === 'string' ? msg.content : ''
+      })
+    }
+    aiMessages.push({ role: 'user', content: message.trim() })
+
+    // ── Gọi AI (Gemini Search / Gemini / Claude → keyword fallback) ──
+    const aiResult = await callAI(systemPrompt, aiMessages, message.trim())
+
+    if (aiResult) {
+      const { reply: rawReply, provider, mode } = aiResult
+      const isKnowledgeMode = mode === 'search'
+
+      // Trích xuất product IDs từ reply (nếu AI đề cập [PRODUCT:ID])
+      const productIdMatches = rawReply.match(/\[PRODUCT:(\d+)\]/g) || []
+      const suggestedIds = productIdMatches.map(m => Number(m.match(/\d+/)[0]))
+
+      let suggestedProducts = []
+      if (suggestedIds.length > 0) {
+        const placeholders = suggestedIds.map(() => '?').join(',')
+        const [rows] = await pool.query(`
+          SELECT p.id, p.name, p.slug, p.price, p.old_price, p.image, p.badge, p.rating,
+                 b.name AS brand
+          FROM products p
+          LEFT JOIN brands b ON b.id = p.brand_id
+          WHERE p.id IN (${placeholders}) AND p.is_active = 1
+        `, suggestedIds)
+        suggestedProducts = rows
+      }
+
+      // Câu hỏi sản phẩm & AI chưa tag ID → lấy sản phẩm từ keyword search
+      // Câu hỏi kiến thức → KHÔNG cần hiển thị product card
+      if (suggestedProducts.length === 0 && !isKnowledgeMode && !isMessageVague(message, mergedIntent)) {
+        const fallback = await fallbackSearch(message, mergedIntent)
+        suggestedProducts = fallback.suggestedProducts || []
+      }
+
+      const cleanReply = rawReply
+        .replace(/\[PRODUCT:\d+\]/g, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()
+
+      updateSessionContext(sessionId, currentIntent, message)
+
+      console.log(`💬 [${provider.toUpperCase()}] Reply sent (${cleanReply.length} chars, ${suggestedProducts.length} products)`)
+      return res.json({ reply: cleanReply, suggestedProducts, provider })
+    }
+
+    // ── Fallback hoàn toàn: tìm sản phẩm theo keyword ──
+    console.log('🔍 Không có AI key, dùng keyword search...')
     const result = await fallbackSearch(message, mergedIntent)
     updateSessionContext(sessionId, currentIntent, message)
     res.json(result)
