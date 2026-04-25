@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Minus, X, Tag, Lock, ArrowRight, Loader2, CheckCircle, Truck, QrCode, Landmark } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
@@ -8,9 +8,9 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
 const PAYMENT_METHODS = [
-  { value: 'cod',      label: 'Thanh toán khi nhận hàng', sub: 'COD',                   Icon: Truck,    color: 'text-amber-400'  },
-  { value: 'atm_card', label: 'Thẻ ATM (qua MoMo)',        sub: 'Chuyển hướng sang MoMo để thanh toán', Icon: Landmark, color: 'text-pink-400'   },
-  { value: 'vietqr',   label: 'VietQR',                    sub: 'Quét mã QR ngân hàng',  Icon: QrCode,   color: 'text-teal-400'   },
+  { value: 'cod',      label: 'Thanh toán khi nhận hàng', sub: 'COD',                     Icon: Truck,    color: 'text-amber-400'  },
+  { value: 'atm_card', label: 'Thẻ ATM (qua MoMo)',       sub: 'Chuyển hướng sang MoMo để thanh toán', Icon: Landmark, color: 'text-pink-400'   },
+  { value: 'vietqr',   label: 'VietQR',                   sub: 'Quét mã QR ngân hàng',    Icon: QrCode,   color: 'text-teal-400'   },
 ]
 
 function PaymentInstructions() { return null }
@@ -74,6 +74,14 @@ export default function ShoppingCartPage() {
   const handleOrder = async (e) => {
     e.preventDefault()
     if (cartItems.length === 0) return
+    
+    // Validate that all items have size_label
+    const itemsWithoutSize = cartItems.filter(i => !i.size_label)
+    if (itemsWithoutSize.length > 0) {
+      setOrderError('Tất cả sản phẩm phải có dung tích. Vui lòng kiểm tra lại giỏ hàng.')
+      return
+    }
+    
     setOrdering(true)
     setOrderError('')
     try {
@@ -100,7 +108,7 @@ export default function ShoppingCartPage() {
       // For ATM / VietQR → redirect to dedicated payment page
       if (['atm_card', 'vietqr'].includes(orderForm.payment_method)) {
         navigate(
-          `/payment/${newOrderId}?method=${orderForm.payment_method}&total=${total}&name=${encodeURIComponent(orderForm.customer_name)}`
+          `/payment/${newOrderId}?method=${orderForm.payment_method}&total=${total}&name=${encodeURIComponent(orderForm.customer_name)}&phone=${encodeURIComponent(orderForm.customer_phone || '')}`
         )
         return
       }
@@ -264,8 +272,8 @@ export default function ShoppingCartPage() {
                 <CField label="Số điện thoại" name="customer_phone" value={orderForm.customer_phone} onChange={setOrderForm} />
                 <CField label="Địa chỉ *"       name="shipping_address" value={orderForm.shipping_address} onChange={setOrderForm} required />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <CField label="Phường/Xã"  name="shipping_ward"     value={orderForm.shipping_ward}     onChange={setOrderForm} />
-                  <CField label="Quận/Huyện" name="shipping_district" value={orderForm.shipping_district} onChange={setOrderForm} />
+                  <CField label="Phường/Xã *"  name="shipping_ward"     value={orderForm.shipping_ward}     onChange={setOrderForm} required />
+                  <CField label="Quận/Huyện *" name="shipping_district" value={orderForm.shipping_district} onChange={setOrderForm} required />
                   <CField label="Tỉnh/TP *"  name="shipping_city"     value={orderForm.shipping_city}     onChange={setOrderForm} required />
                 </div>
 

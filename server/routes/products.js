@@ -1,8 +1,24 @@
 import { Router } from 'express'
+import jwt from 'jsonwebtoken'
 import pool from '../db.js'
 import { authMiddleware } from '../middleware/auth.js'
 
 const router = Router()
+
+// Optional auth middleware - doesn't fail if user not logged in
+const optionalAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization']
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.slice(7)
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'luxe_fragrance_secret_key')
+      req.user = decoded
+    } catch (err) {
+      // Token invalid, just continue without user
+    }
+  }
+  next()
+}
 
 // ── Helper: get or create brand by name ──────────────────────────────────
 async function getOrCreateBrand(name) {
@@ -122,7 +138,7 @@ router.get('/best-sellers', async (req, res) => {
 })
 
 // ── GET /api/products/:id  ────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT p.id, p.name, p.slug, p.description, p.details, p.price, p.old_price,
@@ -169,9 +185,24 @@ router.get('/:id', async (req, res) => {
     )
     product.variants = variants
 
-    // Reviews (approved only)
+    // Reviews - separate user's review from others' approved reviews
+    product.my_review = null
+    product.reviews_list = []
+
+    // If user is logged in, get their review (even if not approved)
+    if (req.user) {
+      const [myReviews] = await pool.query(
+        'SELECT id, author_name AS author, rating, comment, created_at, is_approved FROM reviews WHERE product_id = ? AND user_id = ?',
+        [product.id, req.user.id]
+      )
+      if (myReviews.length > 0) {
+        product.my_review = myReviews[0]
+      }
+    }
+
+    // Get approved reviews from others
     const [reviews] = await pool.query(
-      'SELECT id, author_name AS author, rating, comment, created_at FROM reviews WHERE product_id = ? AND is_approved = 1 ORDER BY created_at DESC LIMIT 10',
+      'SELECT id, author_name AS author, rating, comment, created_at FROM reviews WHERE product_id = ? AND is_approved = 1 ORDER BY created_at DESC',
       [product.id]
     )
     product.reviews_list = reviews
@@ -209,7 +240,7 @@ router.post('/:id/reviews', authMiddleware, async (req, res) => {
       return res.status(409).json({ message: 'Bạn đã đánh giá sản phẩm này rồi' })
 
     await pool.query(
-      'INSERT INTO reviews (product_id, user_id, author_name, rating, comment, is_approved) VALUES (?, ?, ?, ?, ?, 0)',
+      'INSERT INTO reviews (product_id, user_id, author_name, rating, comment, is_approved) VALUES (?, ?, ?, ?, ?, 1)',
       [req.params.id, req.user.id, finalName, Number(rating), comment?.trim() || null]
     )
 

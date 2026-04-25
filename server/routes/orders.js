@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import crypto from 'crypto'
+import axios from 'axios'
 import pool from '../db.js'
 import { authMiddleware } from '../middleware/auth.js'
 
@@ -27,10 +28,26 @@ router.post('/', async (req, res) => {
       conn.release()
       return res.status(400).json({ message: 'Thiếu thông tin giao hàng bắt buộc' })
     }
+
+    // Validate complete shipping address
+    if (!shipping_ward || !shipping_district) {
+      await conn.rollback()
+      conn.release()
+      return res.status(400).json({ message: 'Vui lòng nhập đầy đủ phường/xã và quận/huyện' })
+    }
+
     if (!items?.length) {
       await conn.rollback()
       conn.release()
       return res.status(400).json({ message: 'Giỏ hàng trống' })
+    }
+
+    // Validate all items have size_label (dung tích)
+    const itemsWithoutSize = items.filter(i => !i.size_label)
+    if (itemsWithoutSize.length > 0) {
+      await conn.rollback()
+      conn.release()
+      return res.status(400).json({ message: 'Tất cả sản phẩm phải có dung tích. Vui lòng chọn lại.' })
     }
 
     // Resolve user id from JWT (optional)
@@ -115,13 +132,14 @@ router.post('/', async (req, res) => {
 })
 
 // PUT /api/orders/:id/pay  — confirm payment (momo / vnpay simulation)
-router.put('/:id/pay', authMiddleware, async (req, res) => {
+// Note: Allows both guest (no auth) and authenticated users to confirm payment
+router.put('/:id/pay', async (req, res) => {
   try {
     const orderId = Number(req.params.id)
-    // Ensure order belongs to this user
+    // Allow both guest orders (user_id=null) and authenticated orders
     const [rows] = await pool.query(
-      'SELECT id, payment_status, payment_method FROM orders WHERE id = ? AND user_id = ?',
-      [orderId, req.user.id]
+      'SELECT id, payment_status, payment_method FROM orders WHERE id = ?',
+      [orderId]
     )
     if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' })
     if (rows[0].payment_status === 'paid') {
@@ -142,8 +160,10 @@ router.put('/:id/pay', authMiddleware, async (req, res) => {
 router.get('/my', authMiddleware, async (req, res) => {
   try {
     const [orders] = await pool.query(`
-      SELECT id, customer_name, customer_email, subtotal, discount_amount,
-             shipping_fee, total, payment_method, payment_status, status, created_at
+      SELECT id, customer_name, customer_email, customer_phone,
+             shipping_address, shipping_ward, shipping_district, shipping_city,
+             subtotal, discount_amount, shipping_fee, total, 
+             payment_method, payment_status, status, note, created_at
       FROM orders
       WHERE user_id = ?
       ORDER BY created_at DESC
@@ -178,8 +198,10 @@ router.get('/my', authMiddleware, async (req, res) => {
 router.get('/history', authMiddleware, async (req, res) => {
   try {
     const [orders] = await pool.query(`
-      SELECT id, customer_name, customer_email, subtotal, discount_amount,
-             shipping_fee, total, payment_method, payment_status, status, created_at
+      SELECT id, customer_name, customer_email, customer_phone,
+             shipping_address, shipping_ward, shipping_district, shipping_city,
+             subtotal, discount_amount, shipping_fee, total,
+             payment_method, payment_status, status, note, created_at
       FROM orders
       WHERE user_id = ? AND status = 'delivered'
       ORDER BY created_at DESC
@@ -210,82 +232,146 @@ router.get('/history', authMiddleware, async (req, res) => {
   }
 })
 
-// POST /api/orders/:id/momo-init  — create MoMo ATM payment request
-router.post('/:id/momo-init', authMiddleware, async (req, res) => {
+// POST /api/orders/:id/momo-init  — tạo MoMo payment URL (ATM test)
+router.post('/:id/momo-init', async (req, res) => {
   try {
     const orderId = Number(req.params.id)
     const [rows] = await pool.query(
-      'SELECT id, total, payment_status, user_id, customer_name FROM orders WHERE id = ? AND user_id = ?',
-      [orderId, req.user.id]
+      'SELECT id, total, payment_status, customer_name FROM orders WHERE id = ?',
+      [orderId]
     )
     if (!rows.length) return res.status(404).json({ message: 'Không tìm thấy đơn hàng' })
     if (rows[0].payment_status === 'paid') return res.json({ message: 'Đã thanh toán', alreadyPaid: true })
 
-    const partnerCode  = process.env.MOMO_PARTNER_CODE  || 'MOMO'
-    const accessKey    = process.env.MOMO_ACCESS_KEY    || 'F8BBA842ECF85'
-    const secretKey    = process.env.MOMO_SECRET_KEY    || 'K951B6PE1waDMi640xX08PD3vg6EkVlz'
-    const endpoint     = process.env.MOMO_ENDPOINT      || 'https://test-payment.momo.vn/v2/gateway/api/create'
-    const redirectUrl  = process.env.MOMO_REDIRECT_URL  || 'http://localhost:3000/payment/momo-return'
-    const ipnUrl       = process.env.MOMO_IPN_URL       || 'http://localhost:5000/api/orders/momo-ipn'
+    const partnerCode = process.env.MOMO_PARTNER_CODE || 'MOMO'
+    const accessKey   = process.env.MOMO_ACCESS_KEY   || 'F8BBA842ECF85'
+    const secretKey   = process.env.MOMO_SECRET_KEY   || 'K951B6PE1waDMi640xX08PD3vg6EkVlz'
+    const endpoint    = process.env.MOMO_ENDPOINT      || 'https://test-payment.momo.vn/v2/gateway/api/create'
+    const returnUrl   = process.env.MOMO_RETURN_URL   || 'http://localhost:3000/payment/momo-return'
+    const ipnUrl      = process.env.MOMO_IPN_URL       || 'http://localhost:5000/api/orders/momo-ipn'
 
-    const requestId    = `${partnerCode}${Date.now()}`
-    const momoOrderId  = `${partnerCode}${orderId}_${Date.now()}`
-    const amount       = Math.round(rows[0].total)
-    const orderInfo    = `Thanh toan don hang #${orderId}`
-    const extraData    = Buffer.from(JSON.stringify({ internalOrderId: orderId })).toString('base64')
-    const requestType  = 'payWithATM'
+    const amount      = String(Math.round(rows[0].total))
+    const requestId   = `${partnerCode}_${orderId}_${Date.now()}`
+    const momoOrderId = `${partnerCode}_${orderId}_${Date.now()}`
+    const orderInfo   = `Thanh toan don hang #${orderId} - Luxe Fragrance`
+    const requestType = 'payWithATM'    // ATM test mode
+    const extraData   = Buffer.from(JSON.stringify({ internalOrderId: orderId })).toString('base64')
+    const lang        = 'vi'
 
-    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${momoOrderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`
-    const signature    = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex')
+    // Build rawSignature theo đúng thứ tự MoMo yêu cầu
+    const rawSignature = [
+      `accessKey=${accessKey}`,
+      `amount=${amount}`,
+      `extraData=${extraData}`,
+      `ipnUrl=${ipnUrl}`,
+      `orderId=${momoOrderId}`,
+      `orderInfo=${orderInfo}`,
+      `partnerCode=${partnerCode}`,
+      `redirectUrl=${returnUrl}`,
+      `requestId=${requestId}`,
+      `requestType=${requestType}`,
+    ].join('&')
+
+    const signature = crypto
+      .createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex')
 
     const body = {
-      partnerCode, partnerName: 'Test', storeId: 'LumierePerfume',
-      requestId, amount, orderId: momoOrderId, orderInfo,
-      redirectUrl, ipnUrl, lang: 'vi', extraData,
-      requestType, signature,
+      partnerCode,
+      accessKey,
+      requestId,
+      amount,
+      orderId: momoOrderId,
+      orderInfo,
+      redirectUrl: returnUrl,
+      ipnUrl,
+      lang,
+      extraData,
+      requestType,
+      signature,
     }
 
-    const momoRes = await globalThis.fetch(endpoint, {
-      method: 'POST',
+    const response = await axios.post(endpoint, body, {
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      timeout: 15000,
     })
-    const momoData = await momoRes.json()
 
-    if (momoData.resultCode !== 0) {
-      return res.status(400).json({ message: momoData.message || 'MoMo từ chối yêu cầu', data: momoData })
+    const data = response.data
+    console.log('MoMo response:', data)
+
+    if (data.resultCode === 0 && data.payUrl) {
+      return res.json({ payUrl: data.payUrl })
+    } else {
+      return res.status(400).json({
+        message: data.message || data.localMessage || 'MoMo từ chối tạo đơn hàng',
+        momoCode: data.resultCode,
+      })
     }
-
-    res.json({ payUrl: momoData.payUrl, deeplink: momoData.deeplink, qrCodeUrl: momoData.qrCodeUrl })
   } catch (err) {
-    console.error('MoMo init error:', err)
-    res.status(500).json({ message: 'Lỗi kết nối MoMo: ' + err.message })
+    console.error('MoMo init error:', err?.response?.data || err.message)
+    res.status(500).json({ message: 'Lỗi kết nối MoMo: ' + (err?.response?.data?.message || err.message) })
   }
 })
 
-// POST /api/orders/momo-ipn  — MoMo IPN webhook (server-to-server callback)
+// POST /api/orders/momo-ipn  — MoMo IPN webhook (server-to-server)
 router.post('/momo-ipn', async (req, res) => {
   try {
-    const { orderId, resultCode, extraData, signature } = req.body
+    const {
+      partnerCode, orderId, requestId, amount, orderInfo,
+      orderType, transId, resultCode, message, payType,
+      responseTime, extraData, signature,
+    } = req.body
+
     const secretKey = process.env.MOMO_SECRET_KEY || 'K951B6PE1waDMi640xX08PD3vg6EkVlz'
     const accessKey = process.env.MOMO_ACCESS_KEY || 'F8BBA842ECF85'
 
-    const { amount, orderInfo, requestId, ipnUrl, redirectUrl, partnerCode, requestType } = req.body
-    const raw = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`
-    const expected = crypto.createHmac('sha256', secretKey).update(raw).digest('hex')
+    // Xác minh chữ ký
+    const rawSignature = [
+      `accessKey=${accessKey}`,
+      `amount=${amount}`,
+      `extraData=${extraData}`,
+      `message=${message}`,
+      `orderId=${orderId}`,
+      `orderInfo=${orderInfo}`,
+      `orderType=${orderType}`,
+      `partnerCode=${partnerCode}`,
+      `payType=${payType}`,
+      `requestId=${requestId}`,
+      `responseTime=${responseTime}`,
+      `resultCode=${resultCode}`,
+      `transId=${transId}`,
+    ].join('&')
 
-    if (signature !== expected) {
-      return res.status(400).json({ message: 'Invalid signature' })
+    const expectedSig = crypto
+      .createHmac('sha256', secretKey)
+      .update(rawSignature)
+      .digest('hex')
+
+    if (signature !== expectedSig) {
+      console.warn('MoMo IPN: chữ ký không khớp')
+      return res.status(200).json({ message: 'invalid signature' })
     }
 
-    if (resultCode === 0) {
-      const decoded = JSON.parse(Buffer.from(extraData, 'base64').toString('utf8'))
-      await pool.query('UPDATE orders SET payment_status = ? WHERE id = ?', ['paid', decoded.internalOrderId])
+    // Lấy internalOrderId từ extraData hoặc orderId
+    let internalOrderId = null
+    try {
+      const decoded = JSON.parse(Buffer.from(extraData, 'base64').toString('utf-8'))
+      internalOrderId = decoded.internalOrderId
+    } catch {
+      const match = orderId.match(/_?(\d+)_/)
+      if (match) internalOrderId = Number(match[1])
     }
-    res.json({ message: 'ok' })
+
+    if (resultCode === 0 && internalOrderId) {
+      await pool.query('UPDATE orders SET payment_status = ? WHERE id = ?', ['paid', internalOrderId])
+      console.log(`MoMo IPN: Đơn hàng #${internalOrderId} đã thanh toán thành công`)
+    }
+
+    res.status(200).json({ message: 'success' })
   } catch (err) {
     console.error('MoMo IPN error:', err)
-    res.status(500).json({ message: 'IPN error' })
+    res.status(200).json({ message: 'error' })
   }
 })
 

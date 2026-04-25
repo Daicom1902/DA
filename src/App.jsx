@@ -19,7 +19,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminContacts from './pages/admin/AdminContacts'
-import AdminUsers from './pages/admin/AdminUsers'
+import AdminAccounts from './pages/admin/AdminAccounts'
 import AdminPosts from './pages/admin/AdminPosts'
 import AdminComments from './pages/admin/AdminComments'
 import AdminReviews       from './pages/admin/AdminReviews'
@@ -64,7 +64,7 @@ function App() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="contacts" element={<AdminContacts />} />
-          <Route path="users" element={<AdminUsers />} />
+          <Route path="accounts" element={<AdminAccounts />} />
           <Route path="posts" element={<AdminPosts />} />
           <Route path="comments" element={<AdminComments />} />
           <Route path="reviews"        element={<AdminReviews />} />
@@ -79,7 +79,7 @@ function App() {
           <Route path="/catalog" element={<CatalogPage />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/cart" element={<ShoppingCartPage />} />
-          <Route path="/payment/momo-return" element={<MomoReturnPage />} />
+          <Route path="/payment/momo-return"  element={<MomoReturnPage />} />
           <Route path="/payment/:orderId" element={<PaymentPage />} />
           <Route path="/my-orders" element={<MyOrdersPage />} />
           <Route path="/blog" element={<BlogPage />} />

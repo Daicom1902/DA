@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp, ShoppingBag, Users, DollarSign,
-  Download, Calendar, ArrowUpRight, Package,
+  Download, Calendar, ArrowUpRight, Package, AlertCircle,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -10,6 +11,7 @@ import {
 } from 'recharts'
 import { reportsAPI } from '../../utils/api'
 import { formatVND } from '../../utils/currency'
+import { useAuth } from '../../context/AuthContext'
 
 const RANGES = [
   { key: '7d',  label: '7 ngày' },
@@ -87,7 +89,31 @@ function exportCSV(revenueData) {
 
 /* ════════════════════════════════════════════════════════════ */
 export default function AdminReports() {
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
+
+  // Only admin and manager can access this page
+  if (!authLoading && user && !['admin', 'manager'].includes(user.role)) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <AlertCircle size={48} className="text-red-400" />
+        <div className="text-center">
+          <h2 className="text-xl font-bold text-white mb-2">Không có quyền truy cập</h2>
+          <p className="text-gray-400 mb-4">Chỉ quản trị viên và quản lý mới có thể xem báo cáo.</p>
+          <button
+            onClick={() => navigate('/admin')}
+            className="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg transition-colors"
+          >
+            Quay lại
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const [range, setRange]     = useState('30d')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
@@ -96,14 +122,14 @@ export default function AdminReports() {
     setLoading(true)
     setError(null)
     try {
-      const res = await reportsAPI.getStats(range)
+      const res = await reportsAPI.getStats(range, startDate || null, endDate || null)
       setData(res)
     } catch (e) {
       setError(e.message)
     } finally {
       setLoading(false)
     }
-  }, [range])
+  }, [range, startDate, endDate])
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -148,9 +174,13 @@ export default function AdminReports() {
         {RANGES.map(r => (
           <button
             key={r.key}
-            onClick={() => setRange(r.key)}
+            onClick={() => {
+              setRange(r.key)
+              setStartDate('')
+              setEndDate('')
+            }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-              range === r.key
+              range === r.key && !startDate && !endDate
                 ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20'
                 : 'text-gray-400 hover:text-white hover:bg-dark-700'
             }`}
@@ -159,6 +189,43 @@ export default function AdminReports() {
             {r.label}
           </button>
         ))}
+      </div>
+
+      {/* ── Custom date range ──────────────── */}
+      <div className="bg-dark-900 border border-dark-800 rounded-xl p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-400 mb-2">Từ ngày</label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value)
+              setRange(null)
+            }}
+            className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-400 mb-2">Đến ngày</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            min={startDate}
+            disabled={!startDate}
+            className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+        </div>
+        <button
+          onClick={() => {
+            setStartDate('')
+            setEndDate('')
+            setRange('30d')
+          }}
+          className="px-4 py-2 bg-dark-700 hover:bg-dark-600 text-gray-300 hover:text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+        >
+          Xóa bộ lọc
+        </button>
       </div>
 
       {/* ── KPI cards ────────────────────────── */}

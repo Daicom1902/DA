@@ -38,7 +38,6 @@ function parseExcelXlsxFile(file) {
           return
         }
 
-        console.log('📋 Excel headers:', Object.keys(rows[0] || {}))
         processRows(rows, resolve, reject)
       } catch (error) {
         reject(new Error(`Lỗi khi đọc file Excel: ${error.message}`))
@@ -70,7 +69,6 @@ function parseCSVFile(file) {
           return
         }
 
-        console.log('📋 CSV headers:', Object.keys(rows[0] || {}))
         processRows(rows, resolve, reject)
       } catch (error) {
         reject(new Error(`Lỗi khi đọc file CSV: ${error.message}`))
@@ -128,8 +126,6 @@ function processRows(rows, resolve, reject) {
           normalized.stock = convertToNumber(value)
         }
       })
-      
-      if (idx === 0) console.log('✅ First normalized row:', normalized)
       return normalized
     })
 

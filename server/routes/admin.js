@@ -326,21 +326,58 @@ router.delete('/products/:productId/variants/:variantId', adminOnly, async (req,
   }
 })
 
-// ═══════════════════════════════════════
-//  PRODUCT REVIEWS – moderation
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+//  PRODUCT REVIEWS – hierarchical management with role-based workflow
+// ═══════════════════════════════════════════════════════════════════════════
 
-// GET /api/admin/reviews
+// Helper: Recalculate product rating
+async function recalculateProductRating(productId) {
+  const [[stats]] = await pool.query(
+    'SELECT AVG(rating) AS avg_r, COUNT(*) AS cnt FROM reviews WHERE product_id = ? AND is_approved = 1',
+    [productId]
+  )
+  await pool.query(
+    'UPDATE products SET rating = ?, review_count = ? WHERE id = ?',
+    [stats.avg_r ? Number(stats.avg_r).toFixed(2) : null, stats.cnt, productId]
+  )
+}
+
+// GET /api/admin/reviews – Hierarchical review listing with filters
 router.get('/reviews', async (req, res) => {
   try {
-    const [rows] = await pool.query(`
-      SELECT r.id, r.product_id, r.author_name, r.rating, r.comment,
+    const { status, product_id, sort = 'created_at', order = 'DESC' } = req.query
+    const userRole = req.user.role
+
+    let query = `
+      SELECT r.id, r.product_id, r.user_id, r.author_name, r.rating, r.comment,
              r.is_approved, r.created_at,
              p.name AS product_name
       FROM reviews r
       LEFT JOIN products p ON p.id = r.product_id
-      ORDER BY r.created_at DESC
-    `)
+      WHERE 1=1
+    `
+
+    const params = []
+
+    // Filter by status (0=pending, 1=approved)
+    if (status !== undefined) {
+      query += ' AND r.is_approved = ?'
+      params.push(status === 'approved' || status === '1' ? 1 : 0)
+    }
+
+    // Filter by product
+    if (product_id) {
+      query += ' AND r.product_id = ?'
+      params.push(product_id)
+    }
+
+    // Order by
+    const validSorts = ['created_at', 'rating', 'quality_score', 'helpful_count']
+    const sortCol = validSorts.includes(sort) ? sort : 'created_at'
+    const orderDir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
+    query += ` ORDER BY r.${sortCol} ${orderDir}`
+
+    const [rows] = await pool.query(query, params)
     res.json({ data: rows })
   } catch (err) {
     console.error(err)
@@ -348,52 +385,182 @@ router.get('/reviews', async (req, res) => {
   }
 })
 
-// PUT /api/admin/reviews/:id – toggle approval and recalculate rating
-router.put('/reviews/:id', async (req, res) => {
+// PUT /api/admin/reviews/:id/flag – Staff marks review for attention (currently just a note, flag by setting is_approved to 0)
+router.put('/reviews/:id/flag', async (req, res) => {
   try {
-    const { is_approved } = req.body
-    const [rev] = await pool.query('SELECT product_id FROM reviews WHERE id = ?', [req.params.id])
+    const { reason } = req.body
+    if (!reason?.trim()) return res.status(400).json({ message: 'Vui lòng nhập lý do flag' })
+
+    const [rev] = await pool.query('SELECT id FROM reviews WHERE id = ?', [req.params.id])
     if (rev.length === 0) return res.status(404).json({ message: 'Không tìm thấy đánh giá' })
 
-    await pool.query('UPDATE reviews SET is_approved = ? WHERE id = ?', [is_approved ? 1 : 0, req.params.id])
-
-    // Recalculate product aggregate rating
-    const productId = rev[0].product_id
-    const [[stats]] = await pool.query(
-      'SELECT AVG(rating) AS avg_r, COUNT(*) AS cnt FROM reviews WHERE product_id = ? AND is_approved = 1',
-      [productId]
-    )
+    // Mark as not approved (pending review)
     await pool.query(
-      'UPDATE products SET rating = ?, review_count = ? WHERE id = ?',
-      [stats.avg_r ? Number(stats.avg_r).toFixed(2) : null, stats.cnt, productId]
+      'UPDATE reviews SET is_approved = 0 WHERE id = ?',
+      [req.params.id]
     )
 
-    res.json({ message: 'Đã cập nhật trạng thái đánh giá' })
+    const [updated] = await pool.query('SELECT * FROM reviews WHERE id = ?', [req.params.id])
+    res.json({ data: updated[0], message: 'Đã flag đánh giá' })
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Lỗi server' })
   }
 })
 
-// DELETE /api/admin/reviews/:id
+// PUT /api/admin/reviews/:id/unflag – Remove flag (approve review)
+router.put('/reviews/:id/unflag', async (req, res) => {
+  try {
+    const [rev] = await pool.query('SELECT id FROM reviews WHERE id = ?', [req.params.id])
+    if (rev.length === 0) return res.status(404).json({ message: 'Không tìm thấy đánh giá' })
+
+    // Approve the review
+    await pool.query(
+      'UPDATE reviews SET is_approved = 1 WHERE id = ?',
+      [req.params.id]
+    )
+
+    const [updated] = await pool.query('SELECT * FROM reviews WHERE id = ?', [req.params.id])
+    res.json({ data: updated[0], message: 'Đã bỏ flag đánh giá' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// PUT /api/admin/reviews/:id/approve – Manager/Admin approves review
+router.put('/reviews/:id/approve', async (req, res) => {
+  try {
+    // Only manager and admin can approve
+    if (!['manager', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Chỉ quản lý trở lên mới có thể duyệt đánh giá' })
+    }
+
+    const [rev] = await pool.query('SELECT product_id FROM reviews WHERE id = ?', [req.params.id])
+    if (rev.length === 0) return res.status(404).json({ message: 'Không tìm thấy đánh giá' })
+
+    await pool.query(
+      'UPDATE reviews SET is_approved = 1 WHERE id = ?',
+      [req.params.id]
+    )
+
+    // Recalculate product rating
+    await recalculateProductRating(rev[0].product_id)
+
+    const [updated] = await pool.query('SELECT * FROM reviews WHERE id = ?', [req.params.id])
+    res.json({ data: updated[0], message: 'Đã duyệt đánh giá' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// PUT /api/admin/reviews/:id/reject – Manager/Admin rejects review
+router.put('/reviews/:id/reject', async (req, res) => {
+  try {
+    // Only manager and admin can reject
+    if (!['manager', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Chỉ quản lý trở lên mới có thể từ chối đánh giá' })
+    }
+
+    const [rev] = await pool.query('SELECT product_id FROM reviews WHERE id = ?', [req.params.id])
+    if (rev.length === 0) return res.status(404).json({ message: 'Không tìm thấy đánh giá' })
+
+    await pool.query(
+      'UPDATE reviews SET is_approved = 0 WHERE id = ?',
+      [req.params.id]
+    )
+
+    // Recalculate product rating
+    await recalculateProductRating(rev[0].product_id)
+
+    const [updated] = await pool.query('SELECT * FROM reviews WHERE id = ?', [req.params.id])
+    res.json({ data: updated[0], message: 'Đã từ chối đánh giá' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// DELETE /api/admin/reviews/:id – Admin only: delete review permanently
 router.delete('/reviews/:id', adminOnly, async (req, res) => {
   try {
     const [rev] = await pool.query('SELECT product_id FROM reviews WHERE id = ?', [req.params.id])
+    if (rev.length === 0) return res.status(404).json({ message: 'Không tìm thấy đánh giá' })
+
     await pool.query('DELETE FROM reviews WHERE id = ?', [req.params.id])
 
-    if (rev.length > 0) {
-      const productId = rev[0].product_id
-      const [[stats]] = await pool.query(
-        'SELECT AVG(rating) AS avg_r, COUNT(*) AS cnt FROM reviews WHERE product_id = ? AND is_approved = 1',
-        [productId]
-      )
-      await pool.query(
-        'UPDATE products SET rating = ?, review_count = ? WHERE id = ?',
-        [stats.avg_r ? Number(stats.avg_r).toFixed(2) : null, stats.cnt, productId]
-      )
-    }
+    // Recalculate product rating
+    await recalculateProductRating(rev[0].product_id)
+
+    // Log action
+    await pool.query(
+      'INSERT INTO review_actions (review_id, user_id, user_role, action, notes) VALUES (?, ?, ?, ?, ?)',
+      [req.params.id, req.user.id, req.user.role, 'delete', null]
+    )
 
     res.json({ message: 'Đã xóa đánh giá' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// GET /api/admin/reviews/:id/audit – Get audit trail for a review
+router.get('/reviews/:id/audit', async (req, res) => {
+  try {
+    const [review] = await pool.query(`
+      SELECT r.id, r.is_approved, r.created_at
+      FROM reviews r
+      WHERE r.id = ?
+    `, [req.params.id])
+
+    res.json({ data: review[0] || null })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// GET /api/admin/reviews/stats/summary – Get review statistics
+router.get('/reviews/stats/summary', async (req, res) => {
+  try {
+    // Overall stats
+    const [[overall]] = await pool.query(`
+      SELECT 
+        COUNT(*) AS total_reviews,
+        SUM(CASE WHEN is_approved = 0 THEN 1 ELSE 0 END) AS pending_count,
+        SUM(CASE WHEN is_approved = 1 THEN 1 ELSE 0 END) AS approved_count,
+        AVG(CASE WHEN is_approved = 1 THEN rating ELSE NULL END) AS avg_rating
+      FROM reviews
+    `)
+
+    res.json({ data: overall })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// Legacy compatibility: PUT /api/admin/reviews/:id (toggle approval)
+router.put('/reviews/:id', async (req, res) => {
+  try {
+    const { is_approved } = req.body
+    if (!['manager', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Chỉ quản lý trở lên mới có thể duyệt đánh giá' })
+    }
+
+    const [rev] = await pool.query('SELECT product_id FROM reviews WHERE id = ?', [req.params.id])
+    if (rev.length === 0) return res.status(404).json({ message: 'Không tìm thấy đánh giá' })
+
+    await pool.query(
+      'UPDATE reviews SET is_approved = ? WHERE id = ?',
+      [is_approved ? 1 : 0, req.params.id]
+    )
+
+    await recalculateProductRating(rev[0].product_id)
+
+    res.json({ message: 'Đã cập nhật trạng thái đánh giá' })
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Lỗi server' })
@@ -466,7 +633,7 @@ router.get('/orders/:id', async (req, res) => {
 router.put('/orders/:id', async (req, res) => {
   try {
     const { status, payment_status } = req.body
-    const validStatuses = ['pending', 'confirmed', 'shipping', 'delivered', 'cancelled']
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
 
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Trạng thái không hợp lệ' })
@@ -619,6 +786,64 @@ router.delete('/users/:id', adminOnly, async (req, res) => {
     }
     await pool.query('UPDATE users SET is_active = 0 WHERE id = ?', [req.params.id])
     res.json({ message: 'Đã vô hiệu hóa tài khoản' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// ═══════════════════════════════════════
+//  CUSTOMERS – quản lý người dùng thông thường
+// ═══════════════════════════════════════
+
+// GET /api/admin/customers – lấy danh sách khách hàng/người dùng thông thường
+router.get('/customers', adminOnly, async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT id, full_name, email, phone, is_active, created_at
+       FROM users WHERE role NOT IN ('admin','manager','staff')
+       ORDER BY created_at DESC`
+    )
+    res.json({ data: rows })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// PUT /api/admin/customers/:id – cập nhật thông tin khách hàng
+router.put('/customers/:id', adminOnly, async (req, res) => {
+  try {
+    const { full_name, phone, is_active, password } = req.body
+    const fields = []
+    const params = []
+    if (full_name)            { fields.push('full_name = ?');  params.push(full_name) }
+    if (phone !== undefined)  { fields.push('phone = ?');      params.push(phone || null) }
+    if (is_active !== undefined) { fields.push('is_active = ?'); params.push(is_active ? 1 : 0) }
+    
+    // Handle password update
+    if (password) {
+      const bcrypt = await import('bcryptjs')
+      const hash = await bcrypt.default.hash(password, 12)
+      fields.push('password_hash = ?')
+      params.push(hash)
+    }
+    
+    if (!fields.length) return res.status(400).json({ message: 'Không có trường nào để cập nhật' })
+    params.push(req.params.id)
+    await pool.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, params)
+    res.json({ message: 'Cập nhật thông tin khách hàng thành công' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Lỗi server' })
+  }
+})
+
+// DELETE /api/admin/customers/:id – xóa tài khoản khách hàng
+router.delete('/customers/:id', adminOnly, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM users WHERE id = ?', [req.params.id])
+    res.json({ message: 'Đã xóa tài khoản khách hàng' })
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Lỗi server' })
@@ -1130,75 +1355,129 @@ router.post('/ai/validate-products', async (req, res) => {
 router.get('/reports', async (req, res) => {
   try {
     const range = req.query.range || '30d'
+    const startDate = req.query.startDate
+    const endDate = req.query.endDate
 
     // Build date filter
-    let dateCondition = ''
-    let groupBy = 'DATE(created_at)'
-    let dateLabel = "DATE_FORMAT(created_at, '%d/%m')"
+    let dateSQL = "o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+    let groupBy = 'DATE(o.created_at)'
+    let dateLabel = "DATE_FORMAT(o.created_at, '%d/%m')"
+    let params = []
 
-    switch (range) {
-      case '7d':
-        dateCondition = "AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
-        break
-      case '30d':
-        dateCondition = "AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        break
-      case '90d':
-        dateCondition = "AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)"
-        groupBy = 'YEARWEEK(created_at, 1)'
-        dateLabel = "CONCAT('Tuần ', WEEK(created_at, 1))"
-        break
-      case '12m':
-        dateCondition = "AND created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)"
-        groupBy = "DATE_FORMAT(created_at, '%Y-%m')"
-        dateLabel = "DATE_FORMAT(created_at, '%m/%Y')"
-        break
-      case 'all':
-        dateCondition = ''
-        groupBy = "DATE_FORMAT(created_at, '%Y-%m')"
-        dateLabel = "DATE_FORMAT(created_at, '%m/%Y')"
-        break
+    // If custom date range provided, use it
+    if (startDate && endDate) {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      
+      // Validate dates
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ message: 'Ngày không hợp lệ' })
+      }
+
+      const startStr = start.toISOString().slice(0, 10)
+      const endStr = end.toISOString().slice(0, 10)
+      
+      // Add 1 day to endDate to include all records on that day
+      const endDateInclusive = new Date(end)
+      endDateInclusive.setDate(endDateInclusive.getDate() + 1)
+      const endStrInclusive = endDateInclusive.toISOString().slice(0, 10)
+
+      dateSQL = `o.created_at >= ? AND o.created_at < ?`
+      params = [startStr, endStrInclusive]
+      
+      // Determine grouping based on date range
+      const daysDiff = Math.floor((end - start) / (1000 * 60 * 60 * 24))
+      if (daysDiff <= 7) {
+        groupBy = 'DATE(o.created_at)'
+        dateLabel = "DATE_FORMAT(o.created_at, '%d/%m')"
+      } else if (daysDiff <= 60) {
+        groupBy = 'YEARWEEK(o.created_at, 1)'
+        dateLabel = "CONCAT('Tuần ', WEEK(o.created_at, 1))"
+      } else {
+        groupBy = "DATE_FORMAT(o.created_at, '%Y-%m')"
+        dateLabel = "DATE_FORMAT(o.created_at, '%m/%Y')"
+      }
+    } else {
+      // Use predefined ranges
+      switch (range) {
+        case '7d':
+          dateSQL = "o.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+          break
+        case '30d':
+          dateSQL = "o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+          break
+        case '90d':
+          dateSQL = "o.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)"
+          groupBy = 'YEARWEEK(o.created_at, 1)'
+          dateLabel = "CONCAT('Tuần ', WEEK(o.created_at, 1))"
+          break
+        case '12m':
+          dateSQL = "o.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)"
+          groupBy = "DATE_FORMAT(o.created_at, '%Y-%m')"
+          dateLabel = "DATE_FORMAT(o.created_at, '%m/%Y')"
+          break
+        case 'all':
+          dateSQL = '1=1'
+          groupBy = "DATE_FORMAT(o.created_at, '%Y-%m')"
+          dateLabel = "DATE_FORMAT(o.created_at, '%m/%Y')"
+          break
+        default:
+          dateSQL = "o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+          break
+      }
     }
 
     // 1. KPI Summary
-    const [[kpi]] = await pool.query(`
+    const kpiQuery = `
       SELECT
         COALESCE(SUM(total), 0) AS totalRevenue,
         COUNT(*) AS totalOrders,
         COALESCE(AVG(total), 0) AS avgOrderValue
-      FROM orders
-      WHERE status != 'cancelled' ${dateCondition}
-    `)
+      FROM orders o
+      WHERE o.status != 'cancelled' AND ${dateSQL}
+    `
+    const [[kpi]] = params.length > 0 
+      ? await pool.query(kpiQuery, params)
+      : await pool.query(kpiQuery)
 
-    const [[customerKpi]] = await pool.query(`
+    const customerKpiQuery = `
       SELECT COUNT(*) AS newCustomers
       FROM users
-      WHERE role = 'customer' ${dateCondition.replace('created_at', 'users.created_at') || ''}
-    `)
+      WHERE role = 'customer' AND ${dateSQL.replace(/o\.created_at/g, 'created_at')}
+    `
+    const [[customerKpi]] = params.length > 0
+      ? await pool.query(customerKpiQuery, params)
+      : await pool.query(customerKpiQuery)
 
     // 2. Revenue by period
-    const [revenueByPeriod] = await pool.query(`
+    const revenueQuery = `
       SELECT
         ${dateLabel} AS label,
         ${groupBy} AS period,
         COALESCE(SUM(total), 0) AS revenue,
         COUNT(*) AS orderCount
-      FROM orders
-      WHERE status != 'cancelled' ${dateCondition}
+      FROM orders o
+      WHERE o.status != 'cancelled' AND ${dateSQL}
       GROUP BY period, label
       ORDER BY period ASC
-    `)
+    `
+    const [revenueByPeriod] = params.length > 0
+      ? await pool.query(revenueQuery, params)
+      : await pool.query(revenueQuery)
 
     // 3. Order status breakdown
-    const [ordersByStatus] = await pool.query(`
+    const statusQuery = `
       SELECT status, COUNT(*) AS count
-      FROM orders
-      WHERE 1=1 ${dateCondition}
+      FROM orders o
+      WHERE ${dateSQL}
       GROUP BY status
-    `)
+    `
+    const [ordersByStatus] = params.length > 0
+      ? await pool.query(statusQuery, params)
+      : await pool.query(statusQuery)
 
     // 4. Top 10 best-selling products
-    const [topProducts] = await pool.query(`
+    const productQuery = `
       SELECT
         oi.product_name AS name,
         SUM(oi.quantity) AS totalQty,
@@ -1206,14 +1485,17 @@ router.get('/reports', async (req, res) => {
         MIN(oi.image_url) AS image
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
-      WHERE o.status != 'cancelled' ${dateCondition.replace('created_at', 'o.created_at')}
+      WHERE o.status != 'cancelled' AND ${dateSQL}
       GROUP BY oi.product_name
       ORDER BY totalRevenue DESC
       LIMIT 10
-    `)
+    `
+    const [topProducts] = params.length > 0
+      ? await pool.query(productQuery, params)
+      : await pool.query(productQuery)
 
     // 5. Revenue by brand
-    const [revenueByBrand] = await pool.query(`
+    const brandQuery = `
       SELECT
         COALESCE(b.name, 'Không rõ') AS brand,
         COALESCE(SUM(oi.subtotal), 0) AS revenue
@@ -1221,23 +1503,29 @@ router.get('/reports', async (req, res) => {
       JOIN orders o ON o.id = oi.order_id
       LEFT JOIN products p ON p.name = oi.product_name
       LEFT JOIN brands b ON b.id = p.brand_id
-      WHERE o.status != 'cancelled' ${dateCondition.replace('created_at', 'o.created_at')}
+      WHERE o.status != 'cancelled' AND ${dateSQL}
       GROUP BY b.name
       ORDER BY revenue DESC
       LIMIT 10
-    `)
+    `
+    const [revenueByBrand] = params.length > 0
+      ? await pool.query(brandQuery, params)
+      : await pool.query(brandQuery)
 
     // 6. New customers by period
-    const [customersByPeriod] = await pool.query(`
+    const customerPeriodQuery = `
       SELECT
-        ${dateLabel.replace(/created_at/g, 'users.created_at')} AS label,
-        ${groupBy.replace(/created_at/g, 'users.created_at')} AS period,
+        ${dateLabel.replace(/o\.created_at/g, 'u.created_at')} AS label,
+        ${groupBy.replace(/o\.created_at/g, 'u.created_at')} AS period,
         COUNT(*) AS count
-      FROM users
-      WHERE role = 'customer' ${dateCondition.replace('created_at', 'users.created_at')}
+      FROM users u
+      WHERE u.role = 'customer' AND ${dateSQL.replace(/o\.created_at/g, 'u.created_at')}
       GROUP BY period, label
       ORDER BY period ASC
-    `)
+    `
+    const [customersByPeriod] = params.length > 0
+      ? await pool.query(customerPeriodQuery, params)
+      : await pool.query(customerPeriodQuery)
 
     res.json({
       data: {

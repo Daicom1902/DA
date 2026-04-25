@@ -29,6 +29,7 @@ export default function ProductDetailPage() {
 
   // Review form state
   const [reviews, setReviews]               = useState([])
+  const [myReview, setMyReview]             = useState(null)
   const [reviewRating, setReviewRating]     = useState(5)
   const [reviewHover, setReviewHover]       = useState(0)
   const [reviewComment, setReviewComment]   = useState('')
@@ -43,6 +44,7 @@ export default function ProductDetailPage() {
     setSelectedImage(0)
     setSelectedVariant(null)
     setReviews([])
+    setMyReview(null)
     setReviewSuccess('')
     setReviewError('')
     setReviewComment('')
@@ -50,6 +52,11 @@ export default function ProductDetailPage() {
     productsAPI.getById(id)
       .then(res => {
         setProduct(res.data)
+        // Set user's own review (even if pending)
+        if (res.data.my_review) {
+          setMyReview(res.data.my_review)
+        }
+        // Backend already returns only approved reviews
         setReviews(res.data.reviews_list || [])
         if (res.data.variants?.length > 0) setSelectedVariant(res.data.variants[0])
         return productsAPI.getAll({ limit: 8 })
@@ -72,7 +79,19 @@ export default function ProductDetailPage() {
         comment:     reviewComment.trim(),
         author_name: user.full_name || user.email || '',
       })
-      setReviewSuccess('Cảm ơn bạn đã đánh giá! Đánh giá của bạn đang chờ duyệt.')
+      setReviewSuccess('Cảm ơn bạn đã đánh giá!')
+      // Set user's review immediately (now auto-approved)
+      const newReview = {
+        id: Date.now(), // Temporary ID
+        author: user.full_name || user.email,
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        created_at: new Date().toISOString(),
+        is_approved: 1
+      }
+      setMyReview(newReview)
+      // Add to reviews list so it shows in "other reviews" section too
+      setReviews([newReview, ...reviews])
       setReviewComment('')
       setReviewRating(5)
     } catch (err) {
@@ -114,6 +133,11 @@ export default function ProductDetailPage() {
   }
 
   const handleAddToCart = () => requireAuth(() => {
+    // Require variant selection if product has variants
+    if (product.variants?.length > 0 && !selectedVariant) {
+      alert('Vui lòng chọn dung tích sản phẩm')
+      return false
+    }
     addItem({
       product_id:   product.id,
       variant_id:   selectedVariant?.id   ?? null,
@@ -129,6 +153,11 @@ export default function ProductDetailPage() {
   })
 
   const handleBuyNow = () => requireAuth(() => {
+    // Require variant selection if product has variants
+    if (product.variants?.length > 0 && !selectedVariant) {
+      alert('Vui lòng chọn dung tích sản phẩm')
+      return false
+    }
     addItem({
       product_id:   product.id,
       variant_id:   selectedVariant?.id   ?? null,
@@ -365,7 +394,7 @@ export default function ProductDetailPage() {
 
               {/* Action buttons */}
               <div className="flex gap-3">
-                <button onClick={handleAddToCart} disabled={!inStock}
+                <button onClick={handleAddToCart} disabled={!inStock || (product.variants?.length > 0 && !selectedVariant)}
                   className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all duration-200 ${
                     added
                       ? 'bg-green-600 text-white shadow-lg shadow-green-600/25'
@@ -374,7 +403,7 @@ export default function ProductDetailPage() {
                   {added ? <Check size={17} /> : <ShoppingCart size={17} />}
                   {added ? 'Đã thêm!' : 'Thêm vào giỏ'}
                 </button>
-                <button onClick={handleBuyNow} disabled={!inStock}
+                <button onClick={handleBuyNow} disabled={!inStock || (product.variants?.length > 0 && !selectedVariant)}
                   className="flex-1 py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white shadow-lg shadow-primary-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
                   Mua ngay
                 </button>
@@ -452,41 +481,73 @@ export default function ProductDetailPage() {
           <div className="flex items-center gap-3 mb-8">
             <MessageCircle className="text-primary-400" size={22} />
             <h2 className="text-2xl font-serif font-bold">Đánh giá khách hàng</h2>
-            {reviews.length > 0 && (
+            {(myReview || reviews.length > 0) && (
               <span className="px-2.5 py-0.5 bg-primary-600/20 text-primary-400 text-sm rounded-full font-bold border border-primary-500/20">
-                {reviews.length}
+                {(myReview ? 1 : 0) + reviews.length}
               </span>
             )}
           </div>
 
-          {reviews.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-              {reviews.map(review => (
-                <div key={review.id} className="group bg-dark-900 border border-dark-800 hover:border-dark-700 rounded-2xl p-6 transition-all">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                        {review.author?.charAt(0).toUpperCase() || '?'}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-sm">{review.author}</div>
-                        <div className="text-xs text-gray-500">
-                          {review.created_at ? new Date(review.created_at).toLocaleDateString('vi-VN') : ''}
-                        </div>
-                      </div>
+          {/* User's own review */}
+          {myReview && (
+            <div className="mb-10">
+              <div className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-3">Đánh giá của bạn</div>
+              <div className="bg-dark-900 border-2 border-primary-500/30 rounded-2xl p-6 transition-all">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {myReview.author?.charAt(0).toUpperCase() || '?'}
                     </div>
-                    <div className="flex gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={13} className={i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'} />
-                      ))}
+                    <div>
+                      <div className="font-semibold text-sm">{myReview.author}</div>
+                      <div className="text-xs text-gray-500">
+                        {myReview.created_at ? new Date(myReview.created_at).toLocaleDateString('vi-VN') : ''}
+                      </div>
                     </div>
                   </div>
-                  <p className="text-gray-400 text-sm leading-relaxed">{review.comment}</p>
+                  <div className="flex gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={13} className={i < myReview.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'} />
+                    ))}
+                  </div>
                 </div>
-              ))}
+                <p className="text-gray-400 text-sm leading-relaxed">{myReview.comment}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Other users' reviews */}
+          {reviews.length > 0 ? (
+            <div>
+              {myReview && <div className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Đánh giá khác</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+                {reviews.map(review => (
+                  <div key={review.id} className="group bg-dark-900 border border-dark-800 hover:border-dark-700 rounded-2xl p-6 transition-all">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                          {review.author?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-sm">{review.author}</div>
+                          <div className="text-xs text-gray-500">
+                            {review.created_at ? new Date(review.created_at).toLocaleDateString('vi-VN') : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} size={13} className={i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'} />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-sm leading-relaxed">{review.comment}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
-            <p className="text-gray-500 text-sm mb-10">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+            !myReview && <p className="text-gray-500 text-sm mb-10">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
           )}
 
           {/* Submit review form */}

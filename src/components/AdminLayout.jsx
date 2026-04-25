@@ -37,11 +37,11 @@ const navItems = [
   { to: '/admin/reviews',        icon: Star,       label: 'Đánh giá SP'  },
   { to: '/admin/brands',         icon: Tag,        label: 'Thương hiệu' },
   { to: '/admin/concentrations', icon: Droplets,   label: 'Nồng độ'     },
-  { to: '/admin/reports',        icon: BarChart3,  label: 'Báo cáo'     },
 ]
 // Nav items only for admin/manager
 const adminNavItems = [
-  { to: '/admin/users',    icon: Users,           label: 'Nhân viên'  },
+  { to: '/admin/accounts',    icon: Users,           label: 'Tài khoản'  },
+  { to: '/admin/reports',     icon: BarChart3,       label: 'Báo cáo'    },
 ]
 
 export default function AdminLayout() {

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   Package, ChevronDown, ChevronUp, Truck, QrCode, Landmark,
   CheckCircle, Loader2, ShoppingBag, Calendar, CreditCard,
-  Receipt, Star, RefreshCw, History, Clock, XCircle
+  Receipt, Star, RefreshCw, History, Clock, XCircle, MapPin
 } from 'lucide-react'
 import { ordersAPI } from '../utils/api'
 import { useAuth } from '../context/AuthContext'
@@ -11,15 +11,15 @@ import { formatVND } from '../utils/currency'
 
 // ── Status badge maps ─────────────────────────────────────────────────────
 const ORDER_STATUS = {
-  pending:   { label: 'Chờ xác nhận', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
-  confirmed: { label: 'Đã xác nhận',  color: 'bg-blue-500/20   text-blue-300   border-blue-500/40'   },
-  shipping:  { label: 'Đang giao',    color: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
-  delivered: { label: 'Đã giao',      color: 'bg-green-500/20  text-green-300  border-green-500/40'  },
-  cancelled: { label: 'Đã huỷ',       color: 'bg-red-500/20    text-red-300    border-red-500/40'    },
+  pending:    { label: 'Chờ xác nhận', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
+  processing: { label: 'Đang xử lý',   color: 'bg-blue-500/20   text-blue-300   border-blue-500/40'   },
+  shipped:    { label: 'Đã gửi',       color: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
+  delivered:  { label: 'Đã giao',      color: 'bg-green-500/20  text-green-300  border-green-500/40'  },
+  cancelled:  { label: 'Đã huỷ',       color: 'bg-red-500/20    text-red-300    border-red-500/40'    },
 }
 const PAYMENT_METHOD = {
   cod:      { label: 'COD',              Icon: Truck    },
-  atm_card: { label: 'Thẻ ATM (MoMo)',  Icon: Landmark },
+  atm_card: { label: 'Thẻ ATM (VNPay)',  Icon: Landmark },
   vietqr:   { label: 'VietQR',           Icon: QrCode   },
 }
 const PAY_STATUS = {
@@ -27,6 +27,56 @@ const PAY_STATUS = {
   paid:   { label: 'Đã thanh toán',   color: 'text-green-400',  Icon: CheckCircle },
 }
 
+const ORDER_STEPS = [
+  { status: 'pending',    label: 'Xác nhận' },
+  { status: 'processing', label: 'Xử lý' },
+  { status: 'shipped',    label: 'Gửi' },
+  { status: 'delivered',  label: 'Giao' },
+]
+
+// ── Order Timeline Component ─────────────────────────────────────────────
+function OrderTimeline({ status }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Trạng thái giao hàng</p>
+      <div className="flex items-center justify-between gap-2">
+        {ORDER_STEPS.map((step, idx) => {
+          const currentIdx = ORDER_STEPS.findIndex(s => s.status === status)
+          const isActive = currentIdx >= idx
+          const isCurrent = step.status === status
+          return (
+            <div key={step.status} className="flex-1">
+              <div className="flex flex-col items-center">
+                {/* Step circle */}
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition mb-1.5 ${
+                  isActive
+                    ? isCurrent
+                      ? 'bg-primary-500 text-white ring-2 ring-primary-400/30'
+                      : 'bg-primary-500/40 text-primary-200'
+                    : 'bg-dark-700 text-gray-600'
+                }`}>
+                  {idx + 1}
+                </div>
+                {/* Step label */}
+                <p className={`text-[10px] font-medium text-center ${
+                  isActive ? 'text-primary-300' : 'text-gray-600'
+                }`}>
+                  {step.label}
+                </p>
+              </div>
+              {/* Connector line */}
+              {idx < ORDER_STEPS.length - 1 && (
+                <div className={`h-1 -mx-1 mt-3 transition ${
+                  currentIdx > idx ? 'bg-primary-500' : 'bg-dark-700'
+                }`} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 // ── Order card (for active/pending orders) ────────────────────────────────
 function OrderCard({ order }) {
@@ -82,7 +132,28 @@ function OrderCard({ order }) {
 
       {/* Expandable detail */}
       {open && (
-        <div className="border-t border-dark-700 px-4 md:px-5 pt-4 pb-5">
+        <div className="border-t border-dark-700 px-4 md:px-5 pt-4 pb-5 space-y-4">
+          {/* Timeline */}
+          {order.status !== 'cancelled' && <OrderTimeline status={order.status} />}
+          
+          {/* Shipping Address */}
+          {(order.shipping_address || order.shipping_ward || order.shipping_district || order.shipping_city) && (
+            <div className="bg-dark-800/40 border border-dark-700 rounded-lg p-3.5">
+              <div className="flex items-start gap-2.5 text-sm">
+                <MapPin size={16} className="text-primary-400 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-gray-300 mb-1">Địa chỉ giao hàng</p>
+                  <p className="text-gray-400 text-sm leading-relaxed">{order.shipping_address}</p>
+                  {(order.shipping_ward || order.shipping_district || order.shipping_city) && (
+                    <p className="text-gray-500 text-sm mt-1.5">
+                      {[order.shipping_ward, order.shipping_district, order.shipping_city].filter(Boolean).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Items */}
           <div className="space-y-3 mb-4">
             {order.items?.map((item, idx) => (
@@ -120,14 +191,22 @@ function OrderCard({ order }) {
             </div>
           </div>
 
-          {/* Pay now button for momo/vnpay pending */}
+          {/* Order note */}
+          {order.note && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
+              <p className="text-amber-400 text-xs font-semibold mb-1">Ghi chú</p>
+              <p className="text-amber-100 text-sm">{order.note}</p>
+            </div>
+          )}
+
+          {/* Pay now button for vnpay pending */}
           {canPay && (
             <Link
               to={`/payment/${order.id}?method=${order.payment_method}&total=${order.total}`}
               className={`mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold text-sm text-white transition
-                ${order.payment_method === 'momo'
-                  ? 'bg-pink-600 hover:bg-pink-500'
-                  : 'bg-blue-600 hover:bg-blue-500'}`}
+                ${order.payment_method === 'atm_card'
+                  ? 'bg-blue-600 hover:bg-blue-500'
+                  : 'bg-teal-600 hover:bg-teal-500'}`}
             >
               <PMethodIcon size={16} />
               Thanh toán ngay qua {pMethod.label}
@@ -229,7 +308,25 @@ function HistoryCard({ order }) {
 
       {/* Expandable detail */}
       {open && (
-        <div className="border-t border-dark-700 px-4 md:px-5 pt-4 pb-5 animate-in">
+        <div className="border-t border-dark-700 px-4 md:px-5 pt-4 pb-5 animate-in space-y-4">
+          {/* Shipping Address */}
+          {(order.shipping_address || order.shipping_ward || order.shipping_district || order.shipping_city) && (
+            <div className="bg-dark-800/40 border border-dark-700 rounded-lg p-3.5">
+              <div className="flex items-start gap-2.5 text-sm">
+                <MapPin size={16} className="text-primary-400 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-gray-300 mb-1">Địa chỉ giao hàng</p>
+                  <p className="text-gray-400 text-sm leading-relaxed">{order.shipping_address}</p>
+                  {(order.shipping_ward || order.shipping_district || order.shipping_city) && (
+                    <p className="text-gray-500 text-sm mt-1.5">
+                      {[order.shipping_ward, order.shipping_district, order.shipping_city].filter(Boolean).join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* Items */}
           <div className="space-y-3 mb-4">
             {order.items?.map((item, idx) => (

@@ -66,7 +66,7 @@ export const ordersAPI = {
   myOrders:        ()     => request('/orders/my'),
   purchaseHistory: ()     => request('/orders/history'),
   confirmPayment:  (id)   => request(`/orders/${id}/pay`, { method: 'PUT' }),
-  momoInit:        (id)   => request(`/orders/${id}/momo-init`, { method: 'POST' }),
+  momoInit:        (id)   => request(`/orders/${id}/momo-init`,  { method: 'POST' }),
 }
 
 // ── Contact ───────────────────────────────────────────────────────────────
@@ -97,6 +97,9 @@ export const usersAPI = {
   create:  (body)         => request('/admin/users',      { method: 'POST',   body: JSON.stringify(body) }),
   update:  (id, body)     => request(`/admin/users/${id}`, { method: 'PUT',    body: JSON.stringify(body) }),
   delete:  (id)           => request(`/admin/users/${id}`, { method: 'DELETE' }),
+  getAllCustomers: ()     => request('/admin/customers'),
+  updateCustomer: (id, body) => request(`/admin/customers/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCustomer: (id)    => request(`/admin/customers/${id}`, { method: 'DELETE' }),
 }
 
 // ── Brands ───────────────────────────────────────────────────────────────────
@@ -126,10 +129,20 @@ export const variantsAPI = {
 // ── Product Reviews ───────────────────────────────────────────────────────
 export const reviewsAPI = {
   submit:      (productId, body) => request(`/products/${productId}/reviews`, { method: 'POST', body: JSON.stringify(body) }),
-  // Admin
-  adminGetAll: ()                => request('/admin/reviews'),
+  // Admin - Hierarchy
+  adminGetAll: (params = {})     => request(`/admin/reviews?${new URLSearchParams(params)}`),
   toggle:      (id, is_approved) => request(`/admin/reviews/${id}`, { method: 'PUT', body: JSON.stringify({ is_approved }) }),
   delete:      (id)              => request(`/admin/reviews/${id}`, { method: 'DELETE' }),
+  
+  // Hierarchical workflow actions
+  flag:        (id, reason)      => request(`/admin/reviews/${id}/flag`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+  unflag:      (id)              => request(`/admin/reviews/${id}/unflag`, { method: 'PUT' }),
+  approve:     (id, notes)       => request(`/admin/reviews/${id}/approve`, { method: 'PUT', body: JSON.stringify({ notes }) }),
+  reject:      (id, reason)      => request(`/admin/reviews/${id}/reject`, { method: 'PUT', body: JSON.stringify({ reason }) }),
+  
+  // Audit and stats
+  getAudit:    (id)              => request(`/admin/reviews/${id}/audit`),
+  getStats:    ()                => request('/admin/reviews/stats/summary'),
 }
 
 // ── Product Images (gallery) ───────────────────────────────────────────────
@@ -164,8 +177,61 @@ export const commentsAPI = {
 
 // ── Reports / Statistics ────────────────────────────────────────────────────
 export const reportsAPI = {
-  getStats: async (range = '30d') => {
-    const res = await request(`/admin/reports?range=${range}`)
+  getStats: async (range = '30d', startDate = null, endDate = null) => {
+    let url = `/admin/reports?range=${range}`
+    if (startDate && endDate) {
+      url += `&startDate=${startDate}&endDate=${endDate}`
+    }
+    const res = await request(url)
     return res.data
+  },
+}
+
+// ── File Upload ──────────────────────────────────────────────────────────────
+export const uploadAPI = {
+  uploadImage: async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const jwt = token.get()
+    const headers = {}
+    if (jwt) headers['Authorization'] = `Bearer ${jwt}`
+    
+    try {
+      const res = await fetch(`${BASE_URL}/upload/image`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || `Lỗi ${res.status}: ${res.statusText}`)
+      return data
+    } catch (err) {
+      throw new Error(err.message || 'Lỗi tải lên ảnh')
+    }
+  },
+
+  uploadMultipleImages: async (files) => {
+    const formData = new FormData()
+    Array.from(files).forEach(file => formData.append('files', file))
+    
+    const jwt = token.get()
+    const headers = {}
+    if (jwt) headers['Authorization'] = `Bearer ${jwt}`
+    
+    try {
+      const res = await fetch(`${BASE_URL}/upload/multiple`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || `Lỗi ${res.status}: ${res.statusText}`)
+      return data
+    } catch (err) {
+      throw new Error(err.message || 'Lỗi tải lên các ảnh')
+    }
   },
 }

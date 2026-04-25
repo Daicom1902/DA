@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Search, Loader2, ImagePlus, Layers, Upload, CheckCircle2, AlertCircle, Download, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
-import { productsAPI, productImagesAPI, variantsAPI, brandsAPI, concentrationsAPI } from '../../utils/api'
+import { productsAPI, productImagesAPI, variantsAPI, brandsAPI, concentrationsAPI, uploadAPI } from '../../utils/api'
 import { formatVND } from '../../utils/currency'
 import { parseExcelFile, groupProductsBySize, validateExcelData } from '../../utils/excelImport'
 import { basicValidateProducts } from '../../utils/aiValidation'
@@ -54,6 +54,12 @@ export default function AdminProducts() {
   const [newImgAlt, setNewImgAlt]           = useState('')
   const [addingImg, setAddingImg]           = useState(false)
   const [removingImgId, setRemovingImgId]   = useState(null)
+  const [uploadingFile, setUploadingFile]   = useState(false)
+  const [fileInputRef, setFileInputRef]     = useState(null)
+
+  // Main image upload state
+  const [uploadingMainImage, setUploadingMainImage] = useState(false)
+  const [mainImageInputRef, setMainImageInputRef]   = useState(null)
 
   // Variants state
   const [variants, setVariants]               = useState([])
@@ -242,6 +248,69 @@ export default function AdminProducts() {
       setError(`Lỗi xóa ảnh: ${err.message}`)
     } finally {
       setRemovingImgId(null)
+    }
+  }
+
+  const handleFileUpload = async (e) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingFile(true)
+    setError('')
+
+    try {
+      // Upload each file
+      for (const file of files) {
+        const uploadRes = await uploadAPI.uploadImage(file)
+        const imageUrl = uploadRes.data.url
+
+        if (!editing) {
+          // Create mode: store locally
+          setPendingImages(imgs => [...imgs, { url: imageUrl, alt_text: null }])
+        } else {
+          // Edit mode: add directly to gallery
+          await productImagesAPI.add(editing.id, {
+            url:        imageUrl,
+            alt_text:   null,
+            sort_order: gallery.length,
+          })
+          loadGallery(editing.id)
+        }
+      }
+      
+      // Reset file input
+      if (fileInputRef) {
+        fileInputRef.value = ''
+      }
+    } catch (err) {
+      console.error('[File upload error]', err)
+      setError(`Lỗi tải lên ảnh: ${err.message}`)
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  const handleMainImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingMainImage(true)
+    setError('')
+
+    try {
+      const uploadRes = await uploadAPI.uploadImage(file)
+      const imageUrl = uploadRes.data.url
+      setForm(f => ({ ...f, image: imageUrl }))
+      
+      // Reset file input
+      if (mainImageInputRef) {
+        mainImageInputRef.value = ''
+      }
+    } catch (err) {
+      console.error('[Main image upload error]', err)
+      setError(`Lỗi tải lên ảnh chính: ${err.message}`)
+    } finally {
+      setUploadingMainImage(false)
     }
   }
 
@@ -706,12 +775,42 @@ export default function AdminProducts() {
 
               {/* Main hero image */}
               <div>
-                <Field label="Ảnh chính (URL)" name="image" value={form.image} onChange={setForm} />
+                <label className="block text-sm text-gray-400 mb-3">Ảnh chính</label>
+                
+                {/* File upload section */}
+                <div className="border-2 border-dashed border-primary-500/40 rounded-lg p-3 hover:bg-primary-500/5 transition mb-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      ref={(ref) => setMainImageInputRef(ref)}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleMainImageUpload}
+                      disabled={uploadingMainImage}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => mainImageInputRef?.click()}
+                      disabled={uploadingMainImage}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 rounded-lg text-sm transition disabled:opacity-50"
+                    >
+                      {uploadingMainImage ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {uploadingMainImage ? 'Đang tải...' : 'Chọn từ thiết bị'}
+                    </button>
+                    <span className="text-xs text-gray-500">Hoặc nhập URL bên dưới</span>
+                  </label>
+                </div>
+
+                {/* URL input */}
+                <Field label="URL ảnh (nếu không upload)" name="image" value={form.image} onChange={setForm} />
+                
+                {/* Preview */}
                 {form.image ? (
                   <img
                     src={form.image}
                     alt="preview"
                     className="mt-2 w-24 h-24 object-cover rounded-lg border border-dark-600"
+                    onError={e => { e.target.style.opacity = '0.3' }}
                   />
                 ) : null}
               </div>
@@ -813,35 +912,65 @@ export default function AdminProducts() {
               {/* Add image row */}
               <div className="bg-dark-800/60 border border-dark-700 rounded-xl p-4 space-y-3">
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Thêm ảnh vào gallery</p>
-                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-                  <input
-                    type="text"
-                    placeholder="URL ảnh *"
-                    value={newImgUrl}
-                    onChange={e => setNewImgUrl(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
-                    className="flex-1 min-w-0 px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Alt text (tùy chọn)"
-                    value={newImgAlt}
-                    onChange={e => setNewImgAlt(e.target.value)}
-                    className="flex-1 min-w-0 px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddImage}
-                    disabled={!newImgUrl.trim() || addingImg}
-                    className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center gap-1.5 shrink-0"
-                  >
-                    {addingImg ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                    Thêm
-                  </button>
+                
+                {/* File upload section */}
+                <div className="border-2 border-dashed border-primary-500/40 rounded-lg p-3 hover:bg-primary-500/5 transition">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      ref={(ref) => setFileInputRef(ref)}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      disabled={uploadingFile}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef?.click()}
+                      disabled={uploadingFile}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-primary-600/20 hover:bg-primary-600/30 text-primary-300 rounded-lg text-sm transition disabled:opacity-50"
+                    >
+                      {uploadingFile ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                      {uploadingFile ? 'Đang tải...' : 'Chọn từ thiết bị'}
+                    </button>
+                    <span className="text-xs text-gray-500">JPG, PNG, GIF, WebP (Max 5MB)</span>
+                  </label>
                 </div>
-                {newImgUrl.trim() ? (
-                  <img src={newImgUrl} alt="preview" className="w-20 h-20 object-cover rounded-lg border border-dark-600" onError={e => (e.target.style.opacity = '0.3')} />
-                ) : null}
+
+                {/* URL input section */}
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-400">Hoặc nhập URL ảnh</p>
+                  <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                    <input
+                      type="text"
+                      placeholder="URL ảnh *"
+                      value={newImgUrl}
+                      onChange={e => setNewImgUrl(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddImage())}
+                      className="flex-1 min-w-0 px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Alt text (tùy chọn)"
+                      value={newImgAlt}
+                      onChange={e => setNewImgAlt(e.target.value)}
+                      className="flex-1 min-w-0 px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddImage}
+                      disabled={!newImgUrl.trim() || addingImg}
+                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    >
+                      {addingImg ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                      Thêm
+                    </button>
+                  </div>
+                  {newImgUrl.trim() ? (
+                    <img src={newImgUrl} alt="preview" className="w-20 h-20 object-cover rounded-lg border border-dark-600" onError={e => (e.target.style.opacity = '0.3')} />
+                  ) : null}
+                </div>
               </div>
             </div>
 

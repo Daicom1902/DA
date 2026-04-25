@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import pool from '../db.js'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'luxe_fragrance_secret_key'
 
@@ -8,8 +9,9 @@ export const DASHBOARD_ROLES = ['admin', 'manager', 'staff']
 /**
  * Verify JWT from Authorization header.
  * Sets req.user = { id, email, role } on success.
+ * Also verifies that user account is still active.
  */
-export function authMiddleware(req, res, next) {
+export async function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization']
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ message: 'Không có token xác thực' })
@@ -18,10 +20,21 @@ export function authMiddleware(req, res, next) {
   const token = authHeader.slice(7)
   try {
     const decoded = jwt.verify(token, JWT_SECRET)
+    
+    // Check if user account is still active
+    const [user] = await pool.query('SELECT is_active FROM users WHERE id = ?', [decoded.id])
+    if (user.length === 0 || !user[0].is_active) {
+      return res.status(403).json({ message: 'Tài khoản đã bị vô hiệu hoá hoặc không tồn tại' })
+    }
+    
     req.user = decoded
     next()
-  } catch {
-    return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Token không hợp lệ hoặc đã hết hạn' })
+    }
+    console.error(err)
+    return res.status(500).json({ message: 'Lỗi server' })
   }
 }
 
@@ -51,8 +64,9 @@ export function signToken(payload) {
 
 /**
  * Optional auth — sets req.user if a valid token is provided, but does NOT block.
+ * Also checks if user account is active.
  */
-export function optionalAuth(req, res, next) {
+export async function optionalAuth(req, res, next) {
   const authHeader = req.headers['authorization']
   if (!authHeader?.startsWith('Bearer ')) {
     req.user = null
@@ -60,7 +74,15 @@ export function optionalAuth(req, res, next) {
   }
   const tok = authHeader.slice(7)
   try {
-    req.user = jwt.verify(tok, JWT_SECRET)
+    const decoded = jwt.verify(tok, JWT_SECRET)
+    
+    // Check if user account is still active
+    const [user] = await pool.query('SELECT is_active FROM users WHERE id = ?', [decoded.id])
+    if (user.length > 0 && user[0].is_active) {
+      req.user = decoded
+    } else {
+      req.user = null
+    }
   } catch {
     req.user = null
   }
