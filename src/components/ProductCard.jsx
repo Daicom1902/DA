@@ -1,8 +1,71 @@
-import { Link } from 'react-router-dom'
-import { Heart, Star } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Heart, Star, Eye, ShoppingCart, Zap, Check } from 'lucide-react'
 import { formatVND } from '../utils/currency'
+import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 
 export default function ProductCard({ product }) {
+  const navigate = useNavigate()
+  const { addItem } = useCart()
+  const { user } = useAuth()
+  const [added, setAdded] = useState(false)
+  const [wishlisted, setWishlisted] = useState(false)
+
+  const handleAddToCart = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) {
+      navigate(`/login?redirect=/product/${product.id}`)
+      return
+    }
+    if (product.variant_count > 0) {
+      navigate(`/product/${product.id}`)
+      return
+    }
+    addItem({
+      product_id:   product.id,
+      variant_id:   null,
+      product_name: product.name,
+      brand:        product.brand,
+      size_label:   null,
+      unit_price:   product.price,
+      image_url:    product.image,
+      quantity:     1,
+    })
+    setAdded(true)
+    setTimeout(() => setAdded(false), 1500)
+  }
+
+  const handleBuyNow = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!user) {
+      navigate(`/login?redirect=/product/${product.id}`)
+      return
+    }
+    if (product.variant_count > 0) {
+      navigate(`/product/${product.id}`)
+      return
+    }
+    addItem({
+      product_id:   product.id,
+      variant_id:   null,
+      product_name: product.name,
+      brand:        product.brand,
+      size_label:   null,
+      unit_price:   product.price,
+      image_url:    product.image,
+      quantity:     1,
+    })
+    navigate('/cart')
+  }
+
+  const handleWishlist = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setWishlisted(v => !v)
+  }
 
   return (
     <Link to={`/product/${product.id}`} className="group">
@@ -23,10 +86,46 @@ export default function ProductCard({ product }) {
           )}
           
           {/* Wishlist Button */}
-          <button className="absolute top-2 right-2 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition group/btn">
-            <Heart size={15} className="text-dark-900 group-hover/btn:text-primary-600 group-hover/btn:fill-current transition" />
+          <button 
+            onClick={handleWishlist}
+            className="absolute top-2 right-2 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition group/btn z-10"
+          >
+            <Heart 
+              size={15} 
+              className={`transition ${wishlisted ? 'text-red-500 fill-red-500' : 'text-dark-900 group-hover/btn:text-primary-600'}`} 
+            />
           </button>
 
+          {/* Hover Action Buttons Overlay */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2 sm:gap-3">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/product/${product.id}`) }}
+              className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-full flex items-center justify-center text-dark-900 hover:bg-primary-500 hover:text-white transition-all duration-200 transform translate-y-4 group-hover:translate-y-0 shadow-lg hover:shadow-primary-500/40 hover:scale-110"
+              title="Xem chi tiết"
+            >
+              <Eye size={16} />
+            </button>
+            <button
+              onClick={handleAddToCart}
+              className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-all duration-200 transform translate-y-4 group-hover:translate-y-0 shadow-lg hover:scale-110 ${
+                added 
+                  ? 'bg-green-500 text-white shadow-green-500/40' 
+                  : 'bg-white text-dark-900 hover:bg-primary-500 hover:text-white hover:shadow-primary-500/40'
+              }`}
+              style={{ transitionDelay: '50ms' }}
+              title="Thêm vào giỏ hàng"
+            >
+              {added ? <Check size={16} /> : <ShoppingCart size={16} />}
+            </button>
+            <button
+              onClick={handleBuyNow}
+              className="w-9 h-9 sm:w-11 sm:h-11 bg-white rounded-full flex items-center justify-center text-dark-900 hover:bg-primary-500 hover:text-white transition-all duration-200 transform translate-y-4 group-hover:translate-y-0 shadow-lg hover:shadow-primary-500/40 hover:scale-110"
+              style={{ transitionDelay: '100ms' }}
+              title="Mua ngay"
+            >
+              <Zap size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Product Info */}

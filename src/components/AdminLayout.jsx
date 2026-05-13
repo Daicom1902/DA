@@ -41,7 +41,7 @@ const navItems = [
 // Nav items only for admin/manager
 const adminNavItems = [
   { to: '/admin/accounts',    icon: Users,           label: 'Tài khoản'  },
-  { to: '/admin/reports',     icon: BarChart3,       label: 'Báo cáo'    },
+  { to: '/admin/reports',     icon: BarChart3,       label: 'Báo cáo & Thống kê'    },
 ]
 
 export default function AdminLayout() {

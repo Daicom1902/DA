@@ -55,10 +55,10 @@ export default function Header() {
   }, [searchQuery, searchOpen])
 
   return (
-    <header className="bg-dark-900 border-b border-dark-800 sticky top-0 z-[100]">
+    <header className="header-glass sticky top-0 z-[100]">
       {/* Search overlay */}
       {searchOpen && (
-        <div className="absolute inset-x-0 top-0 z-[110] bg-dark-900 border-b border-dark-800">
+        <div className="absolute inset-x-0 top-0 z-[110] search-overlay border-b border-dark-800">
           <div className="flex items-center px-4 py-3.5 gap-3">
             <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center gap-3">
               <Search size={18} className="text-gray-400 shrink-0" />
@@ -125,33 +125,33 @@ export default function Header() {
         </div>
       )}
       {/* Top Bar */}
-      <div className="bg-dark-950 text-center py-1.5 sm:py-2 text-xs sm:text-sm">
-        <p className="text-gray-400">Miễn phí vận chuyển cho đơn hàng trên 2.500.000₫</p>
+      <div className="header-topbar text-center py-1.5 sm:py-2 text-xs sm:text-sm">
+        <p className="text-white/90 font-medium tracking-wide">✨ Miễn phí vận chuyển cho đơn hàng trên 2.500.000₫ ✨</p>
       </div>
 
       {/* Main Header */}
-      <div className="container mx-auto px-4 py-4">
+      <div className="container mx-auto px-4 py-2.5 md:py-3">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 shrink-0">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary-600 rounded-full"></div>
-            <span className="text-base sm:text-xl font-serif font-bold">LUXE FRAGRANCE</span>
+            <div className="logo-icon w-7 h-7 sm:w-8 sm:h-8 rounded-full"></div>
+            <span className="logo-text text-base sm:text-xl font-serif font-bold tracking-wider">LUXE FRAGRANCE</span>
           </Link>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-gray-300 hover:text-white transition">Trang chủ</Link>
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link to="/" className="nav-link text-gray-300 hover:text-white">Trang chủ</Link>
             
             {/* Collections Mega Menu */}
-            <div className="relative group">
-              <Link to="/catalog" className="text-gray-300 hover:text-white transition flex items-center gap-1">
+            <div className="relative mega-menu-trigger">
+              <Link to="/catalog" className="nav-link text-gray-300 hover:text-white flex items-center gap-1">
                 Sản phẩm
-                <svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </Link>
               {/* Mega Menu */}
-              <div className="absolute top-full left-0 mt-2 w-[800px] bg-dark-800 border border-dark-700 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+              <div className="mega-menu absolute top-full left-0 mt-2 w-[800px] rounded-xl shadow-2xl z-50">
                 <div className="grid grid-cols-4 gap-6 p-6">
                   {/* Column 1 - Thương hiệu */}
                   <div>
@@ -227,23 +227,23 @@ export default function Header() {
             </div>
 
             {/* About Link */}
-            <Link to="/about" className="text-gray-300 hover:text-white transition">Giới thiệu</Link>
+            <Link to="/about" className="nav-link text-gray-300 hover:text-white">Giới thiệu</Link>
 
             {/* Blog Link */}
-            <Link to="/blog" className="text-gray-300 hover:text-white transition">Blog</Link>
+            <Link to="/blog" className="nav-link text-gray-300 hover:text-white">Blog</Link>
 
             {/* Contact Link */}
-            <Link to="/contact" className="text-gray-300 hover:text-white transition">Liên hệ</Link>
+            <Link to="/contact" className="nav-link text-gray-300 hover:text-white">Liên hệ</Link>
 
             {/* Gifts Dropdown */}
-            <div className="relative group">
-              <a href="#" className="text-gray-300 hover:text-white transition flex items-center gap-1">
+            <div className="relative mega-menu-trigger">
+              <a href="#" className="nav-link text-gray-300 hover:text-white flex items-center gap-1">
                 Quà tặng
-                <svg className="w-4 h-4 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </a>
-              <div className="absolute top-full left-0 mt-2 w-56 bg-dark-800 border border-dark-700 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+              <div className="mega-menu absolute top-full right-0 mt-2 w-56 rounded-xl shadow-2xl z-50">
                 <div className="py-2">
                   <Link to="/catalog" className="block px-4 py-3 text-gray-300 hover:bg-dark-700 hover:text-white transition">
                     <div className="font-semibold">Bộ quà tặng</div>
@@ -268,13 +268,13 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            <button onClick={openSearch} className="text-gray-300 hover:text-white transition p-2">
+            <button onClick={openSearch} className="action-icon">
               <Search size={20} />
             </button>
-            <Link to="/cart" className="text-gray-300 hover:text-white transition p-2 relative">
+            <Link to="/cart" className="action-icon relative">
               <ShoppingCart size={20} />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{totalItems > 99 ? '99+' : totalItems}</span>
+                <span className="cart-badge absolute -top-1 -right-1 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">{totalItems > 99 ? '99+' : totalItems}</span>
               )}
             </Link>
 
@@ -306,14 +306,10 @@ export default function Header() {
               </div>
             ) : (
               <div className="hidden md:flex items-center gap-1.5">
-                <Link to="/login"
-                  className="px-2.5 sm:px-3 py-1.5 border border-dark-600 hover:border-primary-500 text-gray-300 hover:text-white rounded-lg text-xs sm:text-sm transition"
-                >
+                <Link to="/login" className="btn-auth-outline">
                   Đăng nhập
                 </Link>
-                <Link to="/register"
-                  className="px-2.5 sm:px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs sm:text-sm font-medium transition"
-                >
+                <Link to="/register" className="btn-auth-fill">
                   Đăng ký
                 </Link>
               </div>

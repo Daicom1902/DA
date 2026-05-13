@@ -43,23 +43,6 @@ CREATE TABLE `addresses` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `banners`
---
-
-CREATE TABLE `banners` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `title` varchar(200) DEFAULT NULL,
-  `subtitle` varchar(300) DEFAULT NULL,
-  `image_url` varchar(500) NOT NULL,
-  `link_url` varchar(500) DEFAULT NULL,
-  `sort_order` smallint(6) NOT NULL DEFAULT 0,
-  `is_active` tinyint(1) NOT NULL DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `brands`
 --
 

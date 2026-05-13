@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import {
-  ArrowRight, Sparkles, Award, Shield, Truck, Loader2,
-  Star, ChevronLeft, ChevronRight, Tag, Flame, Clock, Package, Phone
+  ArrowRight, Shield, Truck, Loader2,
+  ChevronLeft, ChevronRight, Tag, Flame, Clock, Package, Phone,
+  Crown, Sparkles, Heart
 } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { productsAPI, brandsAPI, postsAPI } from '../utils/api'
@@ -58,25 +59,18 @@ const HERO_SLIDES = [
   },
 ]
 
-// ── Testimonials ─────────────────────────────────────────────────────────
-const TESTIMONIALS = [
-  { name: 'Nguyễn Thị Mai', avatar: 'M', rating: 5, text: 'Sản phẩm chính hãng, mùi hương tuyệt vời. Tôi rất hài lòng với gói hàng được đóng gói cẩn thận và giao đúng hẹn.', product: 'Chanel N°5' },
-  { name: 'Trần Văn Hùng', avatar: 'H', rating: 5, text: 'Mua lần đầu mà rất ưng ý. Nhân viên tư vấn nhiệt tình, hàng đúng mô tả. Chắc chắn sẽ quay lại mua tiếp.', product: 'Dior Sauvage' },
-  { name: 'Lê Thị Hoa', avatar: 'H', rating: 5, text: 'Hương thơm lưu lại rất lâu, đúng như mô tả. Giá cả hợp lý so với chất lượng. Website dễ dùng, thanh toán nhanh chóng.', product: 'YSL Black Opium' },
-  { name: 'Phạm Minh Tuấn', avatar: 'T', rating: 5, text: 'Tôi đã mua quà tặng cho bạn gái và cô ấy rất thích. Sẽ tiếp tục ủng hộ shop. Cảm ơn đội ngũ tư vấn rất tận tâm!', product: 'Lancôme La Vie Est Belle' },
-]
-
 export default function HomePage() {
   const [heroIdx, setHeroIdx] = useState(0)
   const [featuredProducts, setFeaturedProducts] = useState([])
   const [newProducts, setNewProducts]           = useState([])
   const [saleProducts, setSaleProducts]         = useState([])
+  const [maleProducts, setMaleProducts]         = useState([])
+  const [femaleProducts, setFemaleProducts]     = useState([])
+  const [unisexProducts, setUnisexProducts]     = useState([])
   const [brands, setBrands]                     = useState([])
   const [posts, setPosts]                       = useState([])
   const [activeTab, setActiveTab]               = useState('featured')
   const [loading, setLoading]                   = useState(true)
-  const [email, setEmail]                       = useState('')
-  const [subscribed, setSubscribed]             = useState(false)
   const heroTimer = useRef(null)
   const brandSliderRef = useRef(null)
   const brandTimer = useRef(null)
@@ -103,13 +97,19 @@ export default function HomePage() {
       productsAPI.getBestSellers(8),
       productsAPI.getAll({ limit: 8, sort: 'newest' }),
       productsAPI.getAll({ badge: 'SALE', limit: 8 }),
+      productsAPI.getAll({ gender: 'male', limit: 8 }),
+      productsAPI.getAll({ gender: 'female', limit: 8 }),
+      productsAPI.getAll({ gender: 'unisex', limit: 8 }),
       brandsAPI.getAll(),
       postsAPI.getAll({ limit: 3 }),
     ])
-      .then(([bestsellers, newest, sale, br, ps]) => {
+      .then(([bestsellers, newest, sale, male, female, unisex, br, ps]) => {
         setFeaturedProducts(bestsellers.data || [])
         setNewProducts(newest.data || [])
         setSaleProducts(sale.data || [])
+        setMaleProducts(male.data || [])
+        setFemaleProducts(female.data || [])
+        setUnisexProducts(unisex.data || [])
         setBrands(br.data || [])
         setPosts(ps.data || [])
       })
@@ -151,7 +151,7 @@ export default function HomePage() {
     <div className="overflow-x-hidden">
 
       {/* ── 1. Hero Slider ─────────────────────────────────────────────── */}
-      <section className="relative h-[65vh] sm:h-[75vh] md:h-screen overflow-hidden">
+      <section className="relative h-[65vh] sm:h-[75vh] md:h-screen overflow-hidden mt-4 md:mt-6">
         {HERO_SLIDES.map((slide, i) => (
           <div
             key={i}
@@ -383,123 +383,82 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── 6. Promotional Banners (2 blocks) ────────────────────────── */}
-      <section className="py-8 container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link to="/catalog?gender=male" className="group relative rounded-2xl overflow-hidden h-52 md:h-64 flex items-end">
-            <div
-              className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-700"
-              style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=800)', filter: 'brightness(0.45)' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/30 to-transparent" />
-            <div className="relative z-10 p-6">
-              <span className="text-xs text-primary-400 uppercase tracking-wider font-semibold">Dành cho Nam</span>
-              <h3 className="text-xl md:text-2xl font-serif font-bold mt-1 mb-3">Hương thơm mạnh mẽ & lịch lãm</h3>
-              <span className="inline-flex items-center gap-1 text-sm text-white hover:text-primary-400 transition">
-                Khám phá <ArrowRight size={14} />
-              </span>
-            </div>
-          </Link>
-          <Link to="/catalog?gender=female" className="group relative rounded-2xl overflow-hidden h-52 md:h-64 flex items-end">
-            <div
-              className="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-700"
-              style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1590156206657-aec230c2e3f6?w=800)', filter: 'brightness(0.45)' }}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/30 to-transparent" />
-            <div className="relative z-10 p-6">
-              <span className="text-xs text-primary-400 uppercase tracking-wider font-semibold">Dành cho Nữ</span>
-              <h3 className="text-xl md:text-2xl font-serif font-bold mt-1 mb-3">Quyến rũ, nữ tính & tinh tế</h3>
-              <span className="inline-flex items-center gap-1 text-sm text-white hover:text-primary-400 transition">
-                Khám phá <ArrowRight size={14} />
-              </span>
-            </div>
-          </Link>
-        </div>
-      </section>
-
-      {/* ── 8. Personalization Quiz ─────────────────────────────────── */}
-      <section className="py-12 md:py-20 bg-dark-900">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-16 items-center">
-            {/* Image */}
-            <div className="relative order-2 lg:order-1">
-              <div className="rounded-2xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=800"
-                  alt="Tìm hương thơm phù hợp"
-                  className="w-full h-72 md:h-96 object-cover"
-                />
+      {/* ── 5b. Nước Hoa Nam ──────────────────────────────────────────── */}
+      {maleProducts.length > 0 && (
+        <section className="py-12 md:py-16 bg-gradient-to-b from-dark-950 via-dark-900/50 to-dark-950 border-t border-dark-800/50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-blue-900/30 border border-blue-700/30 flex items-center justify-center">
+                <Crown size={24} className="text-blue-400" />
               </div>
-              {/* Floating card */}
-              <div className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 bg-dark-800 border border-dark-700 rounded-2xl p-4 md:p-5 shadow-2xl max-w-[200px]">
-                <div className="flex items-center gap-1 mb-1">
-                  {[...Array(5)].map((_, i) => <Star key={i} size={12} className="fill-amber-400 text-amber-400" />)}
-                </div>
-                <p className="text-xs text-gray-300 leading-snug">"Tìm được đúng hương thơm cho mình chỉ sau 2 phút!"</p>
-                <p className="text-xs text-primary-400 mt-1 font-medium">— 10,000+ khách hàng</p>
+              <div>
+                <span className="text-blue-400 text-xs font-semibold uppercase tracking-widest">Dành cho phái mạnh</span>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mt-1">Nước Hoa Nam</h2>
               </div>
             </div>
-            {/* Text */}
-            <div className="order-1 lg:order-2">
-              <span className="text-primary-400 text-xs font-semibold uppercase tracking-widest">Trải nghiệm cá nhân hóa</span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mt-2 mb-4 leading-tight">
-                Khám phá <span className="italic text-primary-400">Hương thơm<br />của Bạn</span>
-              </h2>
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                Không biết bắt đầu từ đâu? Làm bài kiểm tra cá nhân hóa của chúng tôi — chỉ mất 2 phút — để nhận gợi ý nước hoa phù hợp nhất với phong cách và cá tính của bạn.
-              </p>
-              <ul className="space-y-2 mb-8">
-                {['Phân tích tính cách & lối sống', 'Gợi ý từ chuyên gia hương thơm', 'Cá nhân hóa theo dịp sử dụng'].map(t => (
-                  <li key={t} className="flex items-center gap-2 text-sm text-gray-300">
-                    <span className="w-5 h-5 rounded-full bg-primary-900/60 border border-primary-600/50 flex items-center justify-center flex-shrink-0">
-                      <Sparkles size={11} className="text-primary-400" />
-                    </span>
-                    {t}
-                  </li>
-                ))}
-              </ul>
-              <Link to="/catalog" className="btn-primary inline-flex items-center gap-2">
-                BẮT ĐẦU BÀI TEST <ArrowRight size={18} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+              {maleProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+            <div className="text-center mt-8">
+              <Link to="/catalog?gender=male" className="btn-secondary inline-flex items-center gap-2">
+                Xem tất cả <ArrowRight size={16} />
               </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* ── 9. Testimonials ───────────────────────────────────────────── */}
-      <section className="py-12 md:py-16 container mx-auto px-4">
-        <div className="text-center mb-10">
-          <span className="text-primary-400 text-xs font-semibold uppercase tracking-widest">Đánh giá từ khách hàng</span>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mt-2">Khách Hàng Nói Gì?</h2>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <div className="flex">
-              {[...Array(5)].map((_, i) => <Star key={i} size={16} className="fill-amber-400 text-amber-400" />)}
+      {/* ── 5c. Nước Hoa Nữ ──────────────────────────────────────────── */}
+      {femaleProducts.length > 0 && (
+        <section className="py-12 md:py-16 bg-dark-950">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-pink-900/30 border border-pink-700/30 flex items-center justify-center">
+                <Heart size={24} className="text-pink-400" />
+              </div>
+              <div>
+                <span className="text-pink-400 text-xs font-semibold uppercase tracking-widest">Dành cho phái đẹp</span>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mt-1">Nước Hoa Nữ</h2>
+              </div>
             </div>
-            <span className="text-gray-400 text-sm">4.9/5 — Trên 2,500 đánh giá</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+              {femaleProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+            <div className="text-center mt-8">
+              <Link to="/catalog?gender=female" className="btn-secondary inline-flex items-center gap-2">
+                Xem tất cả <ArrowRight size={16} />
+              </Link>
+            </div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {TESTIMONIALS.map((t, i) => (
-            <div key={i} className="card p-5 flex flex-col gap-3">
-              <div className="flex items-center gap-1">
-                {[...Array(t.rating)].map((_, j) => <Star key={j} size={13} className="fill-amber-400 text-amber-400" />)}
+        </section>
+      )}
+
+      {/* ── 5d. Nước Hoa Unisex ───────────────────────────────────────── */}
+      {unisexProducts.length > 0 && (
+        <section className="py-12 md:py-16 bg-gradient-to-b from-dark-950 via-dark-900/50 to-dark-950 border-t border-dark-800/50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 rounded-xl bg-amber-900/30 border border-amber-700/30 flex items-center justify-center">
+                <Sparkles size={24} className="text-amber-400" />
               </div>
-              <p className="text-sm text-gray-300 leading-relaxed flex-1">"{t.text}"</p>
-              <div className="flex items-center gap-2 pt-2 border-t border-dark-700">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                  {t.avatar}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-white">{t.name}</div>
-                  <div className="text-xs text-gray-500">{t.product}</div>
-                </div>
+              <div>
+                <span className="text-amber-400 text-xs font-semibold uppercase tracking-widest">Dành cho cả hai</span>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mt-1">Nước Hoa Unisex</h2>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+              {unisexProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+            <div className="text-center mt-8">
+              <Link to="/catalog?gender=unisex" className="btn-secondary inline-flex items-center gap-2">
+                Xem tất cả <ArrowRight size={16} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* ── 10. Blog Preview ─────────────────────────────────────────── */}
+      {/* ── 7. Blog Preview ──────────────────────────────────────────── */}
       {posts.length > 0 && (
         <section className="py-12 md:py-16 bg-dark-900 border-t border-dark-800">
           <div className="container mx-auto px-4">
@@ -533,46 +492,6 @@ export default function HomePage() {
           </div>
         </section>
       )}
-
-      {/* ── 11. Newsletter ────────────────────────────────────────────── */}
-      <section className="py-16 md:py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-950 via-dark-950 to-dark-950 opacity-80" />
-        <div className="absolute inset-0 opacity-20"
-          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=1200)', backgroundSize: 'cover', backgroundPosition: 'center' }}
-        />
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <div className="max-w-xl mx-auto">
-            <Sparkles className="mx-auto text-primary-400 mb-4" size={32} />
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold mb-3">Nhận Ưu Đãi Độc Quyền</h2>
-            <p className="text-gray-400 mb-8 leading-relaxed">
-              Đăng ký để nhận ưu đãi sớm nhất, thông báo bộ sưu tập mới và gợi ý hương thơm cá nhân hóa.
-            </p>
-            {subscribed ? (
-              <div className="bg-primary-900/40 border border-primary-600/40 rounded-xl px-6 py-4 text-primary-300 font-medium">
-                ✓ Cảm ơn bạn đã đăng ký! Chúng tôi sẽ liên hệ sớm nhất.
-              </div>
-            ) : (
-              <form
-                className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-                onSubmit={e => { e.preventDefault(); if (email) setSubscribed(true) }}
-              >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="Email của bạn..."
-                  className="flex-1 px-5 py-3 bg-dark-800/80 border border-dark-600 rounded-lg focus:outline-none focus:border-primary-500 transition text-white placeholder-gray-500"
-                />
-                <button type="submit" className="btn-primary whitespace-nowrap">
-                  ĐĂNG KÝ
-                </button>
-              </form>
-            )}
-            <p className="text-xs text-gray-500 mt-3">Không spam. Hủy đăng ký bất cứ lúc nào.</p>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
