@@ -36,7 +36,7 @@ async function getOrCreateBrand(name) {
 // ── GET /api/products  ────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    const { search, brand, category, concentration, gender, sort = 'newest', limit, is_featured } = req.query
+    const { search, brand, category, concentration, gender, minPrice, maxPrice, sort = 'newest', limit, is_featured } = req.query
 
     let sql = `
       SELECT p.id, p.name, p.slug, p.description, p.price, p.old_price,
@@ -76,6 +76,14 @@ router.get('/', async (req, res) => {
     if (gender) {
       sql += ' AND p.gender = ?'
       params.push(gender)
+    }
+    if (minPrice !== undefined && minPrice !== '') {
+      sql += ' AND p.price >= ?'
+      params.push(Number(minPrice))
+    }
+    if (maxPrice !== undefined && maxPrice !== '') {
+      sql += ' AND p.price <= ?'
+      params.push(Number(maxPrice))
     }
     if (is_featured === 'true' || is_featured === '1') {
       sql += ' AND p.is_featured = 1'

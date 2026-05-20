@@ -5,7 +5,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative h-[50vh] md:h-[60vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] flex items-center justify-center overflow-hidden">
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -41,13 +41,13 @@ export default function AboutPage() {
               <p>Niềm đam mê của chúng tôi nằm ở việc giúp mỗi khách hàng tìm thấy hương thơm đặc trưng của riêng mình - một hương thơm kể câu chuyện của họ, thể hiện cá tính và để lại ấn tượng khó phai.</p>
             </div>
           </div>
-          <div className="relative">
+            <div className="relative overflow-hidden">
             <img 
               src="https://images.unsplash.com/photo-1595535873420-a599195b3f4a?w=800" 
               alt="Our Story"
-              className="rounded-lg shadow-2xl"
+              className="rounded-lg shadow-2xl w-full"
             />
-            <div className="absolute -bottom-6 -left-6 w-48 h-48 bg-primary-600/10 rounded-lg -z-10"></div>
+            <div className="absolute -bottom-6 -left-6 w-48 h-48 bg-primary-600/10 rounded-lg -z-10 hidden sm:block"></div>
           </div>
         </div>
       </section>
@@ -116,57 +116,25 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="py-12 md:py-20 container mx-auto px-4">
-        <div className="text-center mb-8 md:mb-12">
-          <span className="text-primary-400 text-xs md:text-sm font-semibold uppercase tracking-wider">
-            GẶP GỠ ĐỘI NGŨ
-          </span>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold mt-2">
-            Những người đằng sau hương thơm
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
-          {[
-            { name: 'Sophie Laurent', role: 'Người sáng lập & CEO', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400' },
-            { name: 'Marc Dubois', role: 'Chuyên gia nước hoa chính', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400' },
-            { name: 'Elena Rodriguez', role: 'Giám đốc sáng tạo', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400' },
-            { name: 'James Chen', role: 'Trưởng phòng vận hành', image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400' }
-          ].map((member, index) => (
-            <div key={index} className="text-center group">
-              <div className="relative overflow-hidden rounded-lg mb-3 md:mb-4 aspect-square">
-                <img 
-                  src={member.image} 
-                  alt={member.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                />
-              </div>
-              <h3 className="font-semibold text-sm md:text-base mb-1">{member.name}</h3>
-              <p className="text-xs md:text-sm text-primary-400">{member.role}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Stats Section */}
       <section className="py-12 md:py-20 bg-dark-900">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
             <div className="text-center">
-              <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">25+</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">25+</div>
               <p className="text-sm md:text-base text-gray-400">Năm kinh nghiệm</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">500+</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">500+</div>
               <p className="text-sm md:text-base text-gray-400">Sản phẩm cao cấp</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">50K+</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">50K+</div>
               <p className="text-sm md:text-base text-gray-400">Khách hàng hài lòng</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">98%</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary-400 mb-2">98%</div>
               <p className="text-sm md:text-base text-gray-400">Tỷ lệ hài lòng</p>
             </div>
           </div>

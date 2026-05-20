@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   Heart, Star, Plus, Minus, ShoppingCart,
@@ -177,24 +177,52 @@ export default function ProductDetailPage() {
     <div className="min-h-screen">
       {/* Breadcrumb */}
       <div className="bg-dark-900 border-b border-dark-800">
-        <div className="container mx-auto px-4 py-4">
-          <nav className="text-sm text-gray-400">
+        <div className="container mx-auto px-3 xs:px-4 py-3 xs:py-4">
+          <nav className="text-xs xs:text-sm text-gray-400">
             <Link to="/" className="hover:text-white transition">Trang chủ</Link>
-            <span className="mx-2">/</span>
+            <span className="mx-1 xs:mx-2">/</span>
             <Link to="/catalog" className="hover:text-white transition">Nước hoa</Link>
-            <span className="mx-2">/</span>
-            <span className="text-white">{product.name}</span>
+            <span className="mx-1 xs:mx-2">/</span>
+            <span className="text-white truncate">{product.name}</span>
           </nav>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-10">
-        {/* Product name — above image on all screens */}
+      <div className="container mx-auto px-3 xs:px-4 py-6 xs:py-8 sm:py-10">
+        {/* Product name — mobile only (above image) */}
+        <div className="lg:hidden mb-4">
+          <div className="inline-flex items-center gap-2 mb-2">
+            <span className="text-[10px] xs:text-xs font-bold uppercase tracking-widest text-primary-400 border border-primary-500/30 bg-primary-500/10 px-2 xs:px-3 py-0.5 xs:py-1 rounded-full">
+              {product.brand}
+            </span>
+            {product.badge && (
+              <span className={`text-[10px] xs:text-xs font-bold px-2 xs:px-3 py-0.5 xs:py-1 rounded-full ${
+                product.badge === 'SALE' ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                : product.badge === 'NEW' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+              }`}>{product.badge}</span>
+            )}
+          </div>
+          <h1 className="text-xl xs:text-2xl font-serif font-bold leading-tight">{product.name}</h1>
+          {/* Rating row — mobile */}
+          {product.rating ? (
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex items-center gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={12} className={i < Math.floor(product.rating) ? 'fill-amber-400 text-amber-400' : 'text-gray-700'} />
+                ))}
+              </div>
+              <span className="font-bold text-xs">{product.rating}</span>
+              <span className="text-gray-500 text-xs">·</span>
+              <span className="text-gray-400 text-xs">{product.review_count ?? reviews.length} đánh giá</span>
+            </div>
+          ) : null}
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xs:gap-8 sm:gap-10 md:gap-12 lg:gap-12 mb-12 sm:mb-16 lg:mb-20">
 
           {/* ── Product Images ─────────────────────── */}
-          <div className="space-y-4">
+          <div className="space-y-2 xs:space-y-3 sm:space-y-4">
             {/* Main image */}
             <div className="relative bg-gradient-to-br from-amber-50 to-rose-50 rounded-2xl overflow-hidden aspect-square group cursor-pointer"
               onClick={() => setLightbox(true)}
@@ -202,20 +230,20 @@ export default function ProductDetailPage() {
               <img
                 src={images[selectedImage] || product.image}
                 alt={product.name}
-                className="w-full h-full object-contain p-10 transition-opacity duration-300"
+                className="w-full h-full object-contain p-5 xs:p-6 sm:p-8 md:p-10 transition-opacity duration-300"
               />
-              <button className="absolute bottom-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center text-dark-900 opacity-0 group-hover:opacity-100 transition hover:bg-white">
-                <ZoomIn size={18} />
+              <button className="absolute bottom-3 right-3 xs:bottom-4 xs:right-4 w-9 h-9 xs:w-10 xs:h-10 bg-white/80 rounded-full flex items-center justify-center text-dark-900 opacity-0 group-hover:opacity-100 transition hover:bg-white touch-target">
+                <ZoomIn size={16} className="xs:w-5 xs:h-5" />
               </button>
               {images.length > 1 && (
                 <>
                   <button onClick={e => { e.stopPropagation(); prevImage() }}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 rounded-full flex items-center justify-center text-dark-900 opacity-0 group-hover:opacity-100 transition hover:bg-white">
-                    <ChevronLeft size={18} />
+                    className="absolute left-2 xs:left-3 top-1/2 -translate-y-1/2 w-8 h-8 xs:w-9 xs:h-9 bg-white/80 rounded-full flex items-center justify-center text-dark-900 opacity-0 group-hover:opacity-100 transition hover:bg-white touch-target">
+                    <ChevronLeft size={16} className="xs:w-5 xs:h-5" />
                   </button>
                   <button onClick={e => { e.stopPropagation(); nextImage() }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 bg-white/80 rounded-full flex items-center justify-center text-dark-900 opacity-0 group-hover:opacity-100 transition hover:bg-white">
-                    <ChevronRight size={18} />
+                    className="absolute right-2 xs:right-3 top-1/2 -translate-y-1/2 w-8 h-8 xs:w-9 xs:h-9 bg-white/80 rounded-full flex items-center justify-center text-dark-900 opacity-0 group-hover:opacity-100 transition hover:bg-white touch-target">
+                    <ChevronRight size={16} className="xs:w-5 xs:h-5" />
                   </button>
                 </>
               )}
@@ -223,13 +251,13 @@ export default function ProductDetailPage() {
 
             {/* Thumbnails */}
             {images.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-1">
+              <div className="flex gap-2 xs:gap-3 overflow-x-auto pb-1">
                 {images.map((img, idx) => (
                   <button key={idx} onClick={() => setSelectedImage(idx)}
-                    className={`flex-shrink-0 w-20 h-20 bg-gradient-to-br from-amber-50 to-rose-50 rounded-xl overflow-hidden border-2 transition ${
+                    className={`flex-shrink-0 w-16 h-16 xs:w-18 xs:h-18 sm:w-20 sm:h-20 bg-gradient-to-br from-amber-50 to-rose-50 rounded-xl overflow-hidden border-2 transition ${
                       selectedImage === idx ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-transparent hover:border-dark-600'
                     }`}>
-                    <img src={img} alt="" className="w-full h-full object-contain p-2" />
+                    <img src={img} alt="" className="w-full h-full object-contain p-1.5 xs:p-2" />
                   </button>
                 ))}
               </div>
@@ -237,7 +265,7 @@ export default function ProductDetailPage() {
 
             {/* Dot indicators */}
             {images.length > 1 && (
-              <div className="flex justify-center gap-1.5">
+              <div className="flex justify-center gap-1 xs:gap-1.5">
                 {images.map((_, idx) => (
                   <button key={idx} onClick={() => setSelectedImage(idx)}
                     className={`rounded-full transition-all ${selectedImage === idx ? 'w-5 h-2 bg-primary-500' : 'w-2 h-2 bg-dark-600 hover:bg-dark-500'}`}
@@ -249,7 +277,7 @@ export default function ProductDetailPage() {
             {/* Product badge — below image */}
             {product.badge && (
               <div className="flex items-center gap-2">
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                <span className={`text-xs font-bold px-2.5 xs:px-3 py-1 rounded-full ${
                   product.badge === 'SALE' ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                   : product.badge === 'NEW' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -259,7 +287,7 @@ export default function ProductDetailPage() {
           </div>
 
           {/* ── Product Info ─────────────────────── */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 xs:gap-5 sm:gap-6">
 
             {/* Brand + Name — desktop only (already shown above on mobile) */}
             <div className="hidden lg:block">
@@ -275,7 +303,7 @@ export default function ProductDetailPage() {
                   }`}>{product.badge}</span>
                 )}
               </div>
-              <h1 className="text-3xl lg:text-4xl font-serif font-bold leading-tight mb-3">{product.name}</h1>
+              <h1 className="text-2xl xs:text-3xl lg:text-4xl font-serif font-bold leading-tight mb-2 xs:mb-3">{product.name}</h1>
 
               {/* Rating row */}
               {product.rating ? (
@@ -297,17 +325,17 @@ export default function ProductDetailPage() {
 
             {/* Description */}
             {product.description && (
-              <p className="text-gray-400 leading-relaxed text-[15px]">{product.description}</p>
+              <p className="text-xs xs:text-sm sm:text-base text-gray-400 leading-relaxed">{product.description}</p>
             )}
 
             {/* Price – standalone (no variants) */}
             {(!product.variants || product.variants.length === 0) && (
-              <div className="flex items-end gap-4 bg-dark-800/50 border border-dark-700 rounded-2xl px-5 py-4">
-                <div className="text-3xl font-bold text-white">{formatVND(displayPrice)}</div>
+              <div className="flex items-end gap-3 xs:gap-4 bg-dark-800/50 border border-dark-700 rounded-2xl px-4 xs:px-5 py-3 xs:py-4">
+                <div className="text-2xl xs:text-3xl font-bold text-white">{formatVND(displayPrice)}</div>
                 {displayOldPrice && (
                   <>
-                    <div className="text-lg text-gray-500 line-through mb-0.5">{formatVND(displayOldPrice)}</div>
-                    <span className="mb-0.5 text-sm font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
+                    <div className="text-base xs:text-lg text-gray-500 line-through mb-0.5">{formatVND(displayOldPrice)}</div>
+                    <span className="mb-0.5 text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
                       -{Math.round((1 - displayPrice / displayOldPrice) * 100)}%
                     </span>
                   </>
@@ -318,10 +346,10 @@ export default function ProductDetailPage() {
             {/* Variants */}
             {product.variants?.length > 0 && (
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Dung tích</span>
+                <div className="flex items-center justify-between mb-2 xs:mb-3">
+                  <span className="text-[10px] xs:text-xs font-bold uppercase tracking-widest text-gray-400">Dung tích</span>
                   {selectedVariant && (
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    <span className={`text-[10px] xs:text-xs font-semibold px-2 xs:px-2.5 py-1 rounded-full ${
                       selectedVariant.stock > 0
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
                         : 'bg-red-500/15 text-red-400 border border-red-500/25'
@@ -330,23 +358,23 @@ export default function ProductDetailPage() {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2 xs:gap-3">
                   {product.variants.map(v => {
                     const active = selectedVariant?.id === v.id
                     return (
                       <button key={v.id} onClick={() => setSelectedVariant(v)}
                         disabled={v.stock === 0}
-                        className={`relative px-5 py-3 rounded-2xl border-2 transition-all duration-200 text-sm min-w-[90px] text-center ${
+                        className={`relative px-3 xs:px-4 sm:px-5 py-2.5 xs:py-3 rounded-2xl border-2 transition-all duration-200 text-xs xs:text-sm min-w-[80px] xs:min-w-[90px] text-center touch-target ${
                           active
                             ? 'border-primary-500 bg-gradient-to-b from-primary-500/20 to-primary-600/10 text-primary-300 shadow-lg shadow-primary-500/10 scale-105'
                             : v.stock === 0
                               ? 'border-dark-700 text-gray-600 cursor-not-allowed opacity-40'
                               : 'border-dark-700 hover:border-dark-500 hover:bg-dark-800 text-white'
                         }`}>
-                        <span className="block font-bold text-base">{v.size_label}</span>
-                        <span className={`block text-xs mt-0.5 font-medium ${active ? 'text-primary-400' : 'text-gray-500'}`}>{formatVND(v.price)}</span>
+                        <span className="block font-bold text-sm xs:text-base">{v.size_label}</span>
+                        <span className={`block text-[10px] xs:text-xs mt-0.5 font-medium ${active ? 'text-primary-400' : 'text-gray-500'}`}>{formatVND(v.price)}</span>
                         {v.old_price && (
-                          <span className="block text-[10px] text-gray-600 line-through">{formatVND(v.old_price)}</span>
+                          <span className="block text-[9px] xs:text-[10px] text-gray-600 line-through">{formatVND(v.old_price)}</span>
                         )}
                         {active && (
                           <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary-500 rounded-full flex items-center justify-center shadow-md">
@@ -360,11 +388,11 @@ export default function ProductDetailPage() {
 
                 {/* Selected variant price highlight */}
                 {selectedVariant && (
-                  <div className="mt-4 flex items-end gap-3 bg-dark-800/50 border border-dark-700 rounded-2xl px-5 py-3.5">
-                    <span className="text-2xl font-bold text-white">{formatVND(selectedVariant.price)}</span>
+                  <div className="mt-3 xs:mt-4 flex items-end gap-2 xs:gap-3 bg-dark-800/50 border border-dark-700 rounded-2xl px-4 xs:px-5 py-3 xs:py-3.5">
+                    <span className="text-xl xs:text-2xl font-bold text-white">{formatVND(selectedVariant.price)}</span>
                     {selectedVariant.old_price && (
                       <>
-                        <span className="text-base text-gray-500 line-through mb-0.5">{formatVND(selectedVariant.old_price)}</span>
+                        <span className="text-sm xs:text-base text-gray-500 line-through mb-0.5">{formatVND(selectedVariant.old_price)}</span>
                         <span className="text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full mb-0.5">
                           -{Math.round((1 - selectedVariant.price / selectedVariant.old_price) * 100)}%
                         </span>
@@ -376,53 +404,53 @@ export default function ProductDetailPage() {
             )}
 
             {/* Quantity + Actions */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 w-20 shrink-0">Số lượng</span>
+            <div className="space-y-3 xs:space-y-4">
+              <div className="flex items-center gap-3 xs:gap-4">
+                <span className="text-xs font-bold uppercase tracking-widest text-gray-400 w-16 xs:w-20 shrink-0">Số lượng</span>
                 <div className="flex items-center bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-dark-700 transition">
-                    <Minus size={15} />
+                    className="w-10 h-10 xs:w-11 xs:h-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-dark-700 transition touch-target">
+                    <Minus size={14} className="xs:w-4 xs:h-4" />
                   </button>
-                  <span className="w-12 text-center text-base font-bold select-none">{quantity}</span>
+                  <span className="w-10 xs:w-12 text-center text-sm xs:text-base font-bold select-none">{quantity}</span>
                   <button onClick={() => setQuantity(q => q + 1)}
-                    className="w-11 h-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-dark-700 transition">
-                    <Plus size={15} />
+                    className="w-10 h-10 xs:w-11 xs:h-11 flex items-center justify-center text-gray-400 hover:text-white hover:bg-dark-700 transition touch-target">
+                    <Plus size={14} className="xs:w-4 xs:h-4" />
                   </button>
                 </div>
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-2 xs:gap-3">
                 <button onClick={handleAddToCart} disabled={!inStock || (product.variants?.length > 0 && !selectedVariant)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl font-bold text-sm transition-all duration-200 ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 xs:gap-2 py-3 xs:py-4 rounded-2xl font-bold text-xs xs:text-sm transition-all duration-200 touch-target ${
                     added
                       ? 'bg-green-600 text-white shadow-lg shadow-green-600/25'
                       : 'bg-dark-800 border-2 border-dark-600 hover:border-primary-500/50 hover:bg-dark-700 text-white'
                   } disabled:opacity-40 disabled:cursor-not-allowed`}>
-                  {added ? <Check size={17} /> : <ShoppingCart size={17} />}
-                  {added ? 'Đã thêm!' : 'Thêm vào giỏ'}
+                  {added ? <Check size={15} className="xs:w-4 xs:h-4" /> : <ShoppingCart size={15} className="xs:w-4 xs:h-4" />}
+                  <span className="hidden xs:inline">{added ? 'Đã thêm!' : 'Thêm vào giỏ'}</span>
                 </button>
                 <button onClick={handleBuyNow} disabled={!inStock || (product.variants?.length > 0 && !selectedVariant)}
-                  className="flex-1 py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white shadow-lg shadow-primary-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
+                  className="flex-1 py-3 xs:py-4 rounded-2xl font-bold text-xs xs:text-sm bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white shadow-lg shadow-primary-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 touch-target">
                   Mua ngay
                 </button>
-                <button className="w-13 h-13 px-3.5 rounded-2xl border-2 border-dark-700 hover:border-red-500/50 hover:bg-red-500/10 flex items-center justify-center transition-all duration-200 group flex-shrink-0">
-                  <Heart size={20} className="text-gray-400 group-hover:text-red-400 group-hover:fill-red-400 transition-all" />
+                <button className="w-10 h-10 xs:w-11 xs:h-11 px-2 xs:px-2.5 rounded-2xl border-2 border-dark-700 hover:border-red-500/50 hover:bg-red-500/10 flex items-center justify-center transition-all duration-200 group flex-shrink-0 touch-target">
+                  <Heart size={18} className="xs:w-5 xs:h-5 text-gray-400 group-hover:text-red-400 group-hover:fill-red-400 transition-all" />
                 </button>
               </div>
             </div>
 
             {/* Features */}
-            <div className="grid grid-cols-3 gap-3 pt-5 border-t border-dark-800">
+            <div className="grid grid-cols-3 gap-2 xs:gap-3 pt-4 xs:pt-5 border-t border-dark-800">
               {[
                 { icon: Truck,     label: 'Miễn phí vận chuyển' },
                 { icon: Shield,    label: 'Hàng chính hãng' },
                 { icon: RotateCcw, label: 'Đổi trả dễ dàng' },
               ].map(({ icon: Icon, label }) => (
-                <div key={label} className="flex flex-col items-center gap-2 py-3 rounded-2xl bg-dark-800/40 border border-dark-800 hover:border-dark-700 transition">
-                  <Icon className="text-primary-400" size={20} />
-                  <div className="text-[11px] text-gray-400 text-center leading-tight">{label}</div>
+                <div key={label} className="flex flex-col items-center gap-1.5 xs:gap-2 py-2.5 xs:py-3 rounded-2xl bg-dark-800/40 border border-dark-800 hover:border-dark-700 transition">
+                  <Icon className="text-primary-400 w-4 h-4 xs:w-5 xs:h-5" />
+                  <div className="text-[10px] xs:text-xs text-gray-400 text-center leading-tight">{label}</div>
                 </div>
               ))}
             </div>
@@ -443,9 +471,9 @@ export default function ProductDetailPage() {
 
         {/* Fragrance Notes */}
         {hasNotes ? (
-          <div className="card p-8 mb-12">
-            <h2 className="text-2xl font-serif font-bold mb-6">Nốt hương</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="card p-5 xs:p-6 sm:p-8 mb-8 sm:mb-10 lg:mb-12">
+            <h2 className="text-lg xs:text-xl sm:text-2xl font-serif font-bold mb-4 xs:mb-5 sm:mb-6">Nốt hương</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 xs:gap-6 sm:gap-8">
               {product.notes.top?.length   > 0 ? <NoteGroup title="Nốt hương đầu"  notes={product.notes.top}   /> : null}
               {product.notes.heart?.length > 0 ? <NoteGroup title="Nốt hương giữa" notes={product.notes.heart} /> : null}
               {product.notes.base?.length  > 0 ? <NoteGroup title="Nốt hương nền"  notes={product.notes.base}  /> : null}
@@ -455,21 +483,21 @@ export default function ProductDetailPage() {
 
         {/* Thông tin chi tiết */}
         {product.details && (
-          <div className="bg-dark-900 border border-dark-800 rounded-3xl overflow-hidden mb-8 sm:mb-12">
+          <div className="bg-dark-900 border border-dark-800 rounded-3xl overflow-hidden mb-6 sm:mb-8 lg:mb-12">
             <button
               type="button"
               onClick={() => setDetailsOpen(v => !v)}
-              className="w-full px-5 sm:px-8 py-4 sm:py-5 border-b border-dark-800 bg-dark-800/40 flex items-center gap-3 hover:bg-dark-800/70 transition text-left"
+              className="w-full px-4 xs:px-5 sm:px-8 py-3 xs:py-4 sm:py-5 border-b border-dark-800 bg-dark-800/40 flex items-center gap-2 xs:gap-3 hover:bg-dark-800/70 transition text-left touch-target"
             >
-              <div className="w-1 h-5 bg-primary-500 rounded-full shrink-0" />
-              <h2 className="text-base sm:text-lg font-bold flex-1">Thông tin chi tiết</h2>
+              <div className="w-1 h-4 xs:h-5 bg-primary-500 rounded-full shrink-0" />
+              <h2 className="text-sm xs:text-base sm:text-lg font-bold flex-1">Thông tin chi tiết</h2>
               <ChevronDown
                 size={18}
                 className={`text-gray-400 transition-transform duration-300 ${detailsOpen ? 'rotate-180' : ''}`}
               />
             </button>
             {detailsOpen && (
-              <div className="px-5 sm:px-8 py-5 sm:py-7 text-gray-300 text-sm leading-7 whitespace-pre-wrap">
+              <div className="px-4 xs:px-5 sm:px-8 py-4 xs:py-5 sm:py-7 text-gray-300 text-xs xs:text-sm sm:text-base leading-6 xs:leading-7 whitespace-pre-wrap">
                 {product.details}
               </div>
             )}
@@ -477,12 +505,12 @@ export default function ProductDetailPage() {
         )}
 
         {/* Reviews */}
-        <div className="mb-20">
-          <div className="flex items-center gap-3 mb-8">
-            <MessageCircle className="text-primary-400" size={22} />
-            <h2 className="text-2xl font-serif font-bold">Đánh giá khách hàng</h2>
+        <div className="mb-16 sm:mb-20">
+          <div className="flex items-center gap-2 xs:gap-3 mb-5 xs:mb-6 sm:mb-8">
+            <MessageCircle className="text-primary-400 w-5 h-5 xs:w-6 xs:h-6" />
+            <h2 className="text-lg xs:text-xl sm:text-2xl font-serif font-bold">Đánh giá khách hàng</h2>
             {(myReview || reviews.length > 0) && (
-              <span className="px-2.5 py-0.5 bg-primary-600/20 text-primary-400 text-sm rounded-full font-bold border border-primary-500/20">
+              <span className="px-2 xs:px-2.5 py-0.5 bg-primary-600/20 text-primary-400 text-xs xs:text-sm rounded-full font-bold border border-primary-500/20">
                 {(myReview ? 1 : 0) + reviews.length}
               </span>
             )}
@@ -490,28 +518,28 @@ export default function ProductDetailPage() {
 
           {/* User's own review */}
           {myReview && (
-            <div className="mb-10">
-              <div className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-3">Đánh giá của bạn</div>
-              <div className="bg-dark-900 border-2 border-primary-500/30 rounded-2xl p-6 transition-all">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+            <div className="mb-6 xs:mb-8 sm:mb-10">
+              <div className="text-[10px] xs:text-xs font-bold uppercase tracking-widest text-amber-400 mb-2 xs:mb-3">Đánh giá của bạn</div>
+              <div className="bg-dark-900 border-2 border-primary-500/30 rounded-2xl p-4 xs:p-5 sm:p-6 transition-all">
+                <div className="flex items-start justify-between gap-2 xs:gap-3 mb-3 xs:mb-4">
+                  <div className="flex items-center gap-2 xs:gap-3">
+                    <div className="w-8 h-8 xs:w-9 xs:h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-xs xs:text-sm font-bold shrink-0">
                       {myReview.author?.charAt(0).toUpperCase() || '?'}
                     </div>
-                    <div>
-                      <div className="font-semibold text-sm">{myReview.author}</div>
-                      <div className="text-xs text-gray-500">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-xs xs:text-sm">{myReview.author}</div>
+                      <div className="text-[10px] xs:text-xs text-gray-500">
                         {myReview.created_at ? new Date(myReview.created_at).toLocaleDateString('vi-VN') : ''}
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-0.5">
+                  <div className="flex gap-0.5 shrink-0">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} size={13} className={i < myReview.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'} />
+                      <Star key={i} size={12} className={`xs:w-3 xs:h-3 ${i < myReview.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'}`} />
                     ))}
                   </div>
                 </div>
-                <p className="text-gray-400 text-sm leading-relaxed">{myReview.comment}</p>
+                <p className="text-gray-400 text-xs xs:text-sm leading-relaxed">{myReview.comment}</p>
               </div>
             </div>
           )}
@@ -519,40 +547,40 @@ export default function ProductDetailPage() {
           {/* Other users' reviews */}
           {reviews.length > 0 ? (
             <div>
-              {myReview && <div className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Đánh giá khác</div>}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+              {myReview && <div className="text-[10px] xs:text-xs font-bold uppercase tracking-widest text-gray-500 mb-3 xs:mb-4">Đánh giá khác</div>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 xs:gap-4 sm:gap-5 mb-6 xs:mb-8 sm:mb-10">
                 {reviews.map(review => (
-                  <div key={review.id} className="group bg-dark-900 border border-dark-800 hover:border-dark-700 rounded-2xl p-6 transition-all">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  <div key={review.id} className="group bg-dark-900 border border-dark-800 hover:border-dark-700 rounded-2xl p-4 xs:p-5 sm:p-6 transition-all">
+                    <div className="flex items-start justify-between gap-2 xs:gap-3 mb-3 xs:mb-4">
+                      <div className="flex items-center gap-2 xs:gap-3 min-w-0">
+                        <div className="w-8 h-8 xs:w-9 xs:h-9 rounded-full bg-gradient-to-br from-primary-600 to-primary-400 flex items-center justify-center text-white text-xs xs:text-sm font-bold shrink-0">
                           {review.author?.charAt(0).toUpperCase() || '?'}
                         </div>
-                        <div>
-                          <div className="font-semibold text-sm">{review.author}</div>
-                          <div className="text-xs text-gray-500">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs xs:text-sm truncate">{review.author}</div>
+                          <div className="text-[10px] xs:text-xs text-gray-500">
                             {review.created_at ? new Date(review.created_at).toLocaleDateString('vi-VN') : ''}
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-0.5">
+                      <div className="flex gap-0.5 shrink-0">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} size={13} className={i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'} />
+                          <Star key={i} size={12} className={`xs:w-3 xs:h-3 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-700'}`} />
                         ))}
                       </div>
                     </div>
-                    <p className="text-gray-400 text-sm leading-relaxed">{review.comment}</p>
+                    <p className="text-gray-400 text-xs xs:text-sm leading-relaxed">{review.comment}</p>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            !myReview && <p className="text-gray-500 text-sm mb-10">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+            !myReview && <p className="text-gray-500 text-xs xs:text-sm mb-6 xs:mb-8 sm:mb-10">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
           )}
 
           {/* Submit review form */}
-          <div className="card p-6 md:p-8 bg-dark-900">
-            <h3 className="text-lg font-semibold mb-6 text-white">Viết đánh giá của bạn</h3>
+          <div className="card p-4 xs:p-5 sm:p-6 md:p-8 bg-dark-900">
+            <h3 className="text-base xs:text-lg font-semibold mb-4 xs:mb-5 sm:mb-6 text-white">Viết đánh giá của bạn</h3>
 
 {reviewSuccess ? (
               <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-4 rounded-xl text-sm">
@@ -631,8 +659,8 @@ export default function ProductDetailPage() {
         {/* Related Products */}
         {relatedProducts.length > 0 ? (
           <div>
-            <h2 className="text-2xl font-serif font-bold mb-8">Bạn cũng có thể thích</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <h2 className="text-lg xs:text-xl sm:text-2xl font-serif font-bold mb-4 sm:mb-8">Bạn cũng có thể thích</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 xs:gap-3 sm:gap-4 md:gap-6">
               {relatedProducts.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
           </div>
@@ -658,6 +686,35 @@ export default function ProductDetailPage() {
           )}
         </div>
       )}
+
+      {/* Sticky Mobile CTA Bar */}
+      <div className="lg:hidden sticky-mobile-cta">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-gray-400 truncate">{product.name}</p>
+            <p className="text-sm font-bold text-primary-400">{formatVND(displayPrice)}</p>
+          </div>
+          <button
+            onClick={handleAddToCart}
+            disabled={!inStock || (product.variants?.length > 0 && !selectedVariant)}
+            className={`px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 touch-target ${
+              added
+                ? 'bg-green-600 text-white'
+                : 'bg-dark-800 border border-dark-600 text-white'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            {added ? <Check size={14} /> : <ShoppingCart size={14} />}
+            {added ? 'Đã thêm' : 'Giỏ hàng'}
+          </button>
+          <button
+            onClick={handleBuyNow}
+            disabled={!inStock || (product.variants?.length > 0 && !selectedVariant)}
+            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-lg shadow-primary-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition touch-target"
+          >
+            Mua ngay
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

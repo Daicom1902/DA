@@ -437,27 +437,27 @@ export default function MyOrdersPage() {
     <div className="min-h-screen bg-dark-950">
       {/* Page header */}
       <div className="bg-dark-900 border-b border-dark-800">
-        <div className="container mx-auto px-4 py-6 md:py-8">
-          <nav className="text-xs md:text-sm text-gray-400 mb-3">
+        <div className="container mx-auto px-3 xs:px-4 py-4 xs:py-6 md:py-8">
+          <nav className="text-[11px] xs:text-xs md:text-sm text-gray-400 mb-2 xs:mb-3">
             <Link to="/" className="hover:text-white transition">Trang chủ</Link>
-            <span className="mx-2">/</span>
+            <span className="mx-1.5 xs:mx-2">/</span>
             <span>Đơn hàng</span>
           </nav>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-amber-500/10 flex items-center justify-center border border-primary-500/20">
-              <History className="text-primary-400" size={22} />
+          <div className="flex items-center gap-2.5 xs:gap-3">
+            <div className="w-9 h-9 xs:w-10 xs:h-10 rounded-xl bg-gradient-to-br from-primary-500/20 to-amber-500/10 flex items-center justify-center border border-primary-500/20 flex-shrink-0">
+              <History className="text-primary-400 w-5 h-5 xs:w-[22px] xs:h-[22px]" />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-serif font-bold">Đơn hàng</h1>
+              <h1 className="text-xl xs:text-2xl md:text-3xl font-serif font-bold">Đơn hàng</h1>
               {!loading && !error && (
-                <p className="text-gray-400 text-sm mt-0.5">{orders.length} đơn hàng</p>
+                <p className="text-gray-400 text-xs xs:text-sm mt-0.5">{orders.length} đơn hàng</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 md:py-12 max-w-3xl">
+      <div className="container mx-auto px-3 xs:px-4 py-5 xs:py-8 md:py-12 max-w-3xl">
         {loading && (
           <div className="flex justify-center py-20">
             <Loader2 className="animate-spin text-primary-400" size={40} />
@@ -481,30 +481,30 @@ export default function MyOrdersPage() {
         {!loading && !error && orders.length > 0 && (
           <>
             {/* View tabs */}
-            <div className="flex gap-2 mb-6 border-b border-dark-800">
+            <div className="flex gap-1 xs:gap-2 mb-4 xs:mb-6 border-b border-dark-800 overflow-x-auto hide-scrollbar">
               <button
                 onClick={() => setView('all')}
-                className={`px-4 py-3 text-sm font-medium transition border-b-2 ${
+                className={`px-3 xs:px-4 py-2.5 xs:py-3 text-xs xs:text-sm font-medium transition border-b-2 whitespace-nowrap ${
                   view === 'all'
                     ? 'text-primary-300 border-primary-500'
                     : 'text-gray-400 border-transparent hover:text-gray-300'
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  <Package size={16} />
+                <span className="flex items-center gap-1.5 xs:gap-2">
+                  <Package size={14} className="xs:w-4 xs:h-4" />
                   Tất cả ({orders.length})
                 </span>
               </button>
               <button
                 onClick={() => setView('completed')}
-                className={`px-4 py-3 text-sm font-medium transition border-b-2 ${
+                className={`px-3 xs:px-4 py-2.5 xs:py-3 text-xs xs:text-sm font-medium transition border-b-2 whitespace-nowrap ${
                   view === 'completed'
                     ? 'text-primary-300 border-primary-500'
                     : 'text-gray-400 border-transparent hover:text-gray-300'
                 }`}
               >
-                <span className="flex items-center gap-2">
-                  <CheckCircle size={16} />
+                <span className="flex items-center gap-1.5 xs:gap-2">
+                  <CheckCircle size={14} className="xs:w-4 xs:h-4" />
                   Hoàn thành ({completedOrders.length})
                 </span>
               </button>

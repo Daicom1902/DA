@@ -22,7 +22,21 @@
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   animation: ai-chat-pulse 3s ease-in-out infinite;
   backdrop-filter: blur(8px);
-  position: fixed; /* override for badge */
+}
+
+/* Lift above bottom nav on mobile */
+@media (max-width: 767px) {
+  .ai-chat-toggle {
+    bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    right: 16px;
+    width: 52px;
+    height: 52px;
+    z-index: 9999;
+  }
+  .ai-chat-toggle svg {
+    width: 26px;
+    height: 26px;
+  }
 }
 
 /* Unread notification badge */
@@ -94,7 +108,7 @@
 /* Chat Panel */
 .ai-chat-panel {
   position: fixed;
-  bottom: 110px;
+  bottom: 130px;
   right: 28px;
   z-index: 9998;
   width: 500px;
@@ -115,6 +129,20 @@
     inset 0 1px 0 rgba(255,255,255,0.08);
   transform-origin: bottom right;
   animation: ai-chat-slideUp 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.27) forwards;
+}
+
+/* Fullscreen chat panel on mobile */
+@media (max-width: 767px) {
+  .ai-chat-panel {
+    bottom: 0;
+    right: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: calc(100vh - 60px);
+    max-height: calc(100vh - 60px);
+    border-radius: 20px 20px 0 0;
+    transform-origin: bottom center;
+  }
 }
 
 @keyframes ai-chat-slideUp {
@@ -846,7 +874,7 @@
 @media (max-width: 768px) {
   /* Toggle button: smaller, closer to edge */
   .ai-chat-toggle {
-    bottom: 16px;
+    bottom: 63px;
     right: 16px;
     width: 56px;
     height: 56px;

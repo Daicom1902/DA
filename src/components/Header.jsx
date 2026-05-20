@@ -15,9 +15,27 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState([])
   const [suggestLoading, setSuggestLoading] = useState(false)
   const searchInputRef = useRef(null)
+  const scrollYRef = useRef(0)
   const { user, logout, isAdmin } = useAuth()
   const { totalItems } = useCart()
   const navigate = useNavigate()
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      scrollYRef.current = window.scrollY
+      document.body.classList.add('menu-open')
+      document.body.style.top = `-${scrollYRef.current}px`
+    } else {
+      document.body.classList.remove('menu-open')
+      document.body.style.top = ''
+      window.scrollTo(0, scrollYRef.current)
+    }
+    return () => {
+      document.body.classList.remove('menu-open')
+      document.body.style.top = ''
+    }
+  }, [mobileMenuOpen])
 
   useEffect(() => {
     brandsAPI.getAll()
@@ -271,12 +289,18 @@ export default function Header() {
             <button onClick={openSearch} className="action-icon">
               <Search size={20} />
             </button>
-            <Link to="/cart" className="action-icon relative">
+            <Link to="/cart" className="action-icon relative hidden md:block">
               <ShoppingCart size={20} />
               {totalItems > 0 && (
                 <span className="cart-badge absolute -top-1 -right-1 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold">{totalItems > 99 ? '99+' : totalItems}</span>
               )}
             </Link>
+
+            {!user && (
+              <Link to="/login" className="md:hidden action-icon">
+                <User size={20} />
+              </Link>
+            )}
 
             {user ? (
               <div className="flex items-center gap-1.5">
@@ -325,7 +349,7 @@ export default function Header() {
         </div>
 
         {/* Mobile Menu */}
-        <div className={`md:hidden transition-all duration-300 overflow-hidden ${mobileMenuOpen ? 'max-h-screen' : 'max-h-0'}`}>
+        <div className={`md:hidden transition-all duration-300 overflow-hidden ${mobileMenuOpen ? 'max-h-[80vh] overflow-y-auto' : 'max-h-0'}`}>
           <nav className="py-4 border-t border-dark-800">
             {/* Home */}
             <Link 

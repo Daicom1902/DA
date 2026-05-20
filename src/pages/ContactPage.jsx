@@ -39,19 +39,19 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-dark-900 border-b border-dark-800 py-12 md:py-20">
+      <section className="bg-dark-900 border-b border-dark-800 py-8 sm:py-12 md:py-20">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold mb-3 sm:mb-4">
             Liên hệ với chúng tôi
           </h1>
-          <p className="text-base md:text-lg text-gray-400 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-gray-400 max-w-2xl mx-auto">
             Chúng tôi luôn sẵn sàng hỗ trợ bạn. Hãy gửi tin nhắn và chúng tôi sẽ phản hồi trong thời gian sớm nhất.
           </p>
         </div>
       </section>
 
-      <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
+      <div className="container mx-auto px-4 py-8 sm:py-12 md:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-12">
           {/* Contact Information */}
           <div className="lg:col-span-1 space-y-6">
             <div>
