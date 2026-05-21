@@ -105,7 +105,7 @@ async function callClaude(systemPrompt, messages) {
   }))
 
   const response = await client.messages.create({
-    model: 'claude-3-haiku-20240307',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 1024,
     system: systemPrompt,
     messages: claudeMessages
@@ -469,7 +469,7 @@ const KEYWORD_MAP = {
     'đi chơi': 'casual',    'di choi': 'casual',     'chill': 'casual',  'đi cà phê': 'casual',    'cafe': 'casual',
     'đi dạo': 'casual',     'du lịch': 'casual',     'di lich': 'casual', 'đi biển': 'mùa hè',      'bar': 'tiệc',
     'club': 'tiệc',
-    'quà': 'quà tặng',      'tặng': 'quà tặng',      'gift': 'quà tặng', 'quà tặng': 'quà tặng', 'quà sinh nhật': 'quà tặng', 'quà 8/3': 'quà tặng',
+
     'mùa hè': 'mùa hè',     'hè': 'mùa hè',          'summer': 'mùa hè',       'nóng': 'mùa hè', 'mùa nóng': 'mùa hè', 'jun': 'mùa hè', 'tháng 6': 'mùa hè',
     'mùa đông': 'mùa đông', 'đông': 'mùa đông',      'winter': 'mùa đông',     'lạnh': 'mùa đông', 'mùa lạnh': 'mùa đông', 'tháng 12': 'mùa đông',
     'thể thao': 'sport',    'gym': 'sport',          'tập luyện': 'sport',     'chạy bộ': 'sport',
@@ -510,7 +510,7 @@ const OCCASION_SEARCH = {
   'hẹn hò':    ['quyến rũ', 'gợi cảm', 'ngọt', 'ấm', 'vanilla', 'musk', 'sexy'],
   'tiệc':      ['mạnh mẽ', 'nổi bật', 'sang trọng', 'oud', 'intense', 'night'],
   'casual':    ['tươi mát', 'nhẹ nhàng', 'thoải mái', 'fresh', 'light', 'citrus', 'easy', 'daily'],
-  'quà tặng':  ['phổ biến', 'best seller', 'nổi bật'],
+
   'mùa hè':    ['tươi mát', 'nhẹ nhàng', 'citrus', 'aquatic', 'fresh', 'biển'],
   'mùa đông':  ['ấm áp', 'nồng nàn', 'gỗ', 'oud', 'vanilla', 'spicy', 'woody'],
 }

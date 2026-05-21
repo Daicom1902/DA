@@ -65,7 +65,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1 text-sm md:text-base">Địa chỉ</h3>
-                    <p className="text-sm md:text-base text-gray-400">123 Đường Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh, Việt Nam</p>
+                    <p className="text-sm md:text-base text-gray-400">RMF3+27G, Bá Thiện, Triệu Sơn, Thanh Hóa, Việt Nam</p>
                   </div>
                 </div>
 
@@ -76,8 +76,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1 text-sm md:text-base">Điện thoại</h3>
-                    <p className="text-sm md:text-base text-gray-400">+84 123 456 789</p>
-                    <p className="text-sm md:text-base text-gray-400">+84 987 654 321</p>
+                    <p className="text-sm md:text-base text-gray-400">0392434402</p>
+                    <p className="text-sm md:text-base text-gray-400">0393306437</p>
                   </div>
                 </div>
 
@@ -88,8 +88,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1 text-sm md:text-base">Email</h3>
-                    <p className="text-sm md:text-base text-gray-400">info@luxefragrance.vn</p>
-                    <p className="text-sm md:text-base text-gray-400">support@luxefragrance.vn</p>
+                    <p className="text-sm md:text-base text-gray-400">20224329@eaut.edu.vn</p>
                   </div>
                 </div>
 
@@ -224,7 +223,7 @@ export default function ContactPage() {
       {/* Map Section */}
       <section className="h-[300px] md:h-[400px] bg-dark-800">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.325743120321!2d106.66408931533432!3d10.786346192314928!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752ed23c800000%3A0x302feb869ca48d!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBLaG9hIGjhu41jIFThu7Egbmhpw6puIC0gxJDhuqFpIGjhu41jIFF14buRYyBnaWEgVFAuSENN!5e0!3m2!1svi!2s!4v1234567890"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3898.5389770349863!2d105.20642631534135!3d19.792856086927403!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x313508a2a4a4a4a5%3A0x1234567890abcdef!2sB%C3%A1%20Thi%E1%BB%87n%2C%20Tri%E1%BB%87u%20S%C6%A1n%2C%20Thanh%20H%C3%B3a!5e0!3m2!1svi!2s!4v1234567890"
           width="100%"
           height="100%"
           style={{ border: 0 }}

@@ -34,6 +34,12 @@ export default function CatalogPage() {
     setSelectedBrand(paramBrand)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync gender from URL param
+  useEffect(() => {
+    const paramGender = searchParams.get('gender') || ''
+    setSelectedGender(paramGender)
+  }, [searchParams])
+
   const fetchProducts = useCallback(() => {
     setLoading(true)
     const params = { sort: sortBy }

@@ -201,12 +201,13 @@ export default function HomePage() {
         </button>
 
         {/* Dots */}
-        <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1 sm:gap-1.5">
+        <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2">
           {HERO_SLIDES.map((_, i) => (
             <button
               key={i}
               onClick={() => goSlide(i)}
-              className={`rounded-full transition-all duration-300 touch-target ${i === heroIdx ? 'w-5 sm:w-6 h-1.5 bg-primary-500' : 'w-1.5 h-1.5 bg-gray-500'}`}
+              aria-label={`Slide ${i + 1}`}
+              className={`rounded-full transition-all duration-500 ease-out ${i === heroIdx ? 'w-7 sm:w-8 h-2 sm:h-2.5 bg-primary-500 shadow-lg shadow-primary-500/40' : 'w-2 sm:w-2.5 h-2 sm:h-2.5 bg-white/30 hover:bg-white/50'}`}
             />
           ))}
         </div>

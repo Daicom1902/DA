@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 14, 2026 at 03:43 AM
+-- Generation Time: May 20, 2026 at 06:17 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,25 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `datn_perfume`
 --
-
--- --------------------------------------------------------
-
---
--- Table structure for table `addresses`
---
-
-CREATE TABLE `addresses` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `user_id` int(10) UNSIGNED NOT NULL,
-  `recipient` varchar(120) NOT NULL,
-  `phone` varchar(20) NOT NULL,
-  `address_line` varchar(255) NOT NULL,
-  `ward` varchar(100) DEFAULT NULL,
-  `district` varchar(100) DEFAULT NULL,
-  `city` varchar(100) NOT NULL,
-  `is_default` tinyint(1) NOT NULL DEFAULT 0,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -70,7 +51,7 @@ INSERT INTO `brands` (`id`, `name`, `slug`, `logo_url`, `description`, `created_
 (19, 'YSL', 'ysl', 'https://lh4.googleusercontent.com/proxy/2VuUp5BEMYsDWjgtrujT8wOK8P2xc0ye3gNcAOfqs-Q0rjYOiSdCbOOYhT-YxQSch4CcY9QOvtFmbVs9gaG0n_IM9-usCv7kxT4c-A', NULL, '2026-03-05 02:39:40'),
 (20, 'D&G', 'dg', 'https://inkythuatso.com/uploads/images/2021/12/logo-dg-inkythuatso-08-16-54-31.jpg', NULL, '2026-03-05 02:41:14'),
 (21, 'Giorgio Armani', 'giorgio-armani', 'https://i.pinimg.com/736x/6c/fb/09/6cfb09112eb8542e2e9c520df8789a1e.jpg', NULL, '2026-03-05 02:43:06'),
-(23, 'Calvin Klein', 'calvin-klein', NULL, NULL, '2026-03-20 06:00:17');
+(23, 'Calvin Klein', 'calvin-klein', 'https://logowik.com/content/uploads/images/calvin-klein5506.jpg', NULL, '2026-03-20 06:00:17');
 
 -- --------------------------------------------------------
 
@@ -122,7 +103,8 @@ CREATE TABLE `comments` (
 --
 
 INSERT INTO `comments` (`id`, `post_id`, `user_id`, `guest_name`, `guest_email`, `content`, `is_approved`, `created_at`) VALUES
-(1, 1, 1, NULL, NULL, 'ạdadjladjla', 1, '2026-02-26 01:58:42');
+(1, 1, 1, NULL, NULL, 'ạdadjladjla', 1, '2026-02-26 01:58:42'),
+(2, 1, 4, NULL, NULL, 'bgytvyt', 1, '2026-04-22 02:26:56');
 
 -- --------------------------------------------------------
 
@@ -168,18 +150,12 @@ CREATE TABLE `contacts` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
-
 --
--- Table structure for table `fragrance_notes`
+-- Dumping data for table `contacts`
 --
 
-CREATE TABLE `fragrance_notes` (
-  `id` int(10) UNSIGNED NOT NULL,
-  `product_id` int(10) UNSIGNED NOT NULL,
-  `layer` enum('top','heart','base') NOT NULL,
-  `note` varchar(100) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `contacts` (`id`, `name`, `email`, `phone`, `subject`, `message`, `is_read`, `replied_at`, `created_at`) VALUES
+(1, 'dai dao', 'dai202648@gmail.com', '0232424242', 'rwrwr', 'wrwr', 0, NULL, '2026-04-20 08:03:42');
 
 -- --------------------------------------------------------
 
@@ -193,10 +169,12 @@ CREATE TABLE `orders` (
   `customer_name` varchar(120) NOT NULL,
   `customer_email` varchar(191) NOT NULL,
   `customer_phone` varchar(20) DEFAULT NULL,
+  `recipient_name` varchar(120) DEFAULT NULL,
   `shipping_address` varchar(255) NOT NULL,
   `shipping_ward` varchar(100) DEFAULT NULL,
   `shipping_district` varchar(100) DEFAULT NULL,
   `shipping_city` varchar(100) NOT NULL,
+  `shipping_service` varchar(100) DEFAULT NULL,
   `subtotal` decimal(15,2) NOT NULL,
   `discount_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
   `shipping_fee` decimal(15,2) NOT NULL DEFAULT 0.00,
@@ -209,27 +187,41 @@ CREATE TABLE `orders` (
   `status` enum('pending','processing','shipped','delivered','cancelled') NOT NULL DEFAULT 'pending',
   `note` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `confirmed_at` datetime DEFAULT NULL,
+  `shipped_at` datetime DEFAULT NULL,
+  `delivered_at` datetime DEFAULT NULL,
+  `cancelled_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `customer_name`, `customer_email`, `customer_phone`, `shipping_address`, `shipping_ward`, `shipping_district`, `shipping_city`, `subtotal`, `discount_amount`, `shipping_fee`, `tax_amount`, `total`, `promo_code_id`, `promo_code_used`, `payment_method`, `payment_status`, `status`, `note`, `created_at`, `updated_at`) VALUES
-(1, 2, 'Đào Khả Đại', '29@eaut.edu.vn', '093723727', 'Thôn 3 Xã Triệu Sơn Thanh Hóa', NULL, NULL, 'Thanh Hóa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 01:56:09', '2026-02-26 01:56:09'),
-(2, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 3 ', 'Triệu Sơn', NULL, 'Thanh Hóa', 1292942.00, 0.00, 0.00, 0.00, 1292942.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 02:05:06', '2026-02-26 02:05:06'),
-(3, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 2', 'Triệu Sơn', NULL, 'Thanh Hóa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 02:18:41', '2026-02-26 02:18:41'),
-(4, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 2', 'Triệu Sơn', NULL, 'Thanh Hóa', 1292942.00, 0.00, 0.00, 0.00, 1292942.00, NULL, NULL, '', 'paid', '', NULL, '2026-02-26 02:19:44', '2026-03-29 03:16:48'),
-(5, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 1', NULL, NULL, 'Thanh Hóa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:29:51', '2026-02-26 02:32:09'),
-(6, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 1', NULL, NULL, 'Thanh Hóa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 02:31:50', '2026-02-26 02:31:50'),
-(7, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 5', NULL, NULL, 'Thanh Hoa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:42:20', '2026-02-26 02:42:20'),
-(8, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'thôn 6', NULL, NULL, 'Thanh Hóa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:53:04', '2026-02-26 02:53:04'),
-(9, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'Thôn 4', NULL, NULL, 'Thanh Hóa', 1292942.00, 0.00, 0.00, 0.00, 1292942.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:56:27', '2026-02-26 02:56:27'),
-(10, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'hk', NULL, NULL, 'Thanh Hóa', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'vietqr', 'unpaid', 'pending', NULL, '2026-02-26 03:11:04', '2026-02-26 03:11:04'),
-(11, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'iy', NULL, NULL, 'h', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 03:20:19', '2026-02-26 03:20:19'),
-(12, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'ư', NULL, NULL, 's', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 03:22:04', '2026-02-26 03:22:04'),
-(13, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', 'f', NULL, NULL, 'd', 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 03:31:13', '2026-04-14 00:56:25');
+INSERT INTO `orders` (`id`, `user_id`, `customer_name`, `customer_email`, `customer_phone`, `recipient_name`, `shipping_address`, `shipping_ward`, `shipping_district`, `shipping_city`, `shipping_service`, `subtotal`, `discount_amount`, `shipping_fee`, `tax_amount`, `total`, `promo_code_id`, `promo_code_used`, `payment_method`, `payment_status`, `status`, `note`, `created_at`, `updated_at`, `confirmed_at`, `shipped_at`, `delivered_at`, `cancelled_at`) VALUES
+(1, 9, 'Đào Khả Đại', '29@eaut.edu.vn', '093723727', NULL, 'Thôn 3 Xã Triệu Sơn Thanh Hóa', NULL, NULL, 'Thanh Hóa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 01:56:09', '2026-04-17 01:53:46', NULL, NULL, NULL, NULL),
+(2, 9, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 3 ', 'Triệu Sơn', NULL, 'Thanh Hóa', NULL, 1292942.00, 0.00, 0.00, 0.00, 1292942.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 02:05:06', '2026-04-17 01:53:46', NULL, NULL, NULL, NULL),
+(3, 9, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 2', 'Triệu Sơn', NULL, 'Thanh Hóa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 02:18:41', '2026-04-17 01:53:46', NULL, NULL, NULL, NULL),
+(4, 9, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 2', 'Triệu Sơn', NULL, 'Thanh Hóa', NULL, 1292942.00, 0.00, 0.00, 0.00, 1292942.00, NULL, NULL, '', 'paid', '', NULL, '2026-02-26 02:19:44', '2026-04-17 01:53:46', NULL, NULL, NULL, NULL),
+(5, 9, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 1', NULL, NULL, 'Thanh Hóa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:29:51', '2026-04-17 01:53:46', NULL, NULL, NULL, NULL),
+(6, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 1', NULL, NULL, 'Thanh Hóa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, '', 'unpaid', 'pending', NULL, '2026-02-26 02:31:50', '2026-02-26 02:31:50', NULL, NULL, NULL, NULL),
+(7, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 5', NULL, NULL, 'Thanh Hoa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:42:20', '2026-02-26 02:42:20', NULL, NULL, NULL, NULL),
+(8, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'thôn 6', NULL, NULL, 'Thanh Hóa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:53:04', '2026-02-26 02:53:04', NULL, NULL, NULL, NULL),
+(9, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 4', NULL, NULL, 'Thanh Hóa', NULL, 1292942.00, 0.00, 0.00, 0.00, 1292942.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-02-26 02:56:27', '2026-02-26 02:56:27', NULL, NULL, NULL, NULL),
+(10, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'hk', NULL, NULL, 'Thanh Hóa', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'vietqr', 'unpaid', 'pending', NULL, '2026-02-26 03:11:04', '2026-02-26 03:11:04', NULL, NULL, NULL, NULL),
+(11, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'iy', NULL, NULL, 'h', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', '', NULL, '2026-02-26 03:20:19', '2026-04-17 02:55:57', '2026-04-17 09:55:57', NULL, NULL, NULL),
+(12, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'ư', NULL, NULL, 's', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', '', NULL, '2026-02-26 03:22:04', '2026-04-17 03:14:05', '2026-04-17 10:14:05', NULL, NULL, NULL),
+(13, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'f', NULL, NULL, 'd', NULL, 2999999.00, 0.00, 0.00, 0.00, 2999999.00, NULL, NULL, 'atm_card', 'unpaid', 'processing', NULL, '2026-02-26 03:31:13', '2026-04-20 00:47:38', '2026-04-17 08:57:30', NULL, NULL, NULL),
+(14, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Số nhà 243', 'Dân lý', 'Triệu sơn', 'Thanh hóa', 'GHN', 900000.00, 0.00, 0.00, 0.00, 900000.00, NULL, NULL, 'cod', 'unpaid', 'shipped', NULL, '2026-04-16 03:10:45', '2026-04-18 09:40:27', '2026-04-17 10:14:02', '2026-04-17 10:08:35', NULL, NULL),
+(15, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'Thôn 3', 'Dân lý  ', 'Triệu Sơn', 'Thanh Hóa', NULL, 800000.00, 0.00, 0.00, 0.00, 800000.00, NULL, NULL, 'atm_card', 'paid', 'processing', NULL, '2026-04-20 00:50:45', '2026-04-20 07:53:24', NULL, NULL, NULL, NULL),
+(16, 4, 'Nguyen Van Test', 'test@gmail.com', '0901234567', NULL, '123 Test Street', 'Test Ward', 'Test District', 'Ho Chi Minh', NULL, 800000.00, 0.00, 0.00, 0.00, 800000.00, NULL, NULL, 'atm_card', 'paid', 'pending', NULL, '2026-04-20 01:14:10', '2026-04-23 09:53:04', NULL, NULL, NULL, NULL),
+(17, NULL, 'Nguyen Van Test', 'test@gmail.com', '0901234567', NULL, '123 Test Street', 'Test Ward', 'Test District', 'Ho Chi Minh', NULL, 500000.00, 0.00, 0.00, 0.00, 500000.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-04-20 01:22:59', '2026-04-20 01:22:59', NULL, NULL, NULL, NULL),
+(18, 4, 'Test User', 'test@gmail.com', '0901234567', NULL, '123 Nguyen Hue', 'Ben Nghe', 'Quan 1', 'Ho Chi Minh', NULL, 800000.00, 0.00, 0.00, 0.00, 800000.00, NULL, NULL, 'atm_card', 'paid', 'pending', NULL, '2026-04-20 01:26:51', '2026-04-22 09:00:41', NULL, NULL, NULL, NULL),
+(19, NULL, 'Test VNPay', 'test@gmail.com', '0901234567', NULL, '123 Test', 'Ward', 'District', 'HCM', NULL, 500000.00, 0.00, 0.00, 0.00, 500000.00, NULL, NULL, 'atm_card', 'unpaid', 'pending', NULL, '2026-04-20 01:45:26', '2026-05-19 05:50:05', NULL, NULL, NULL, NULL),
+(20, 4, 'Test VNPay User', 'test@gmail.com', '0901234567', NULL, '123 Nguyen Hue', 'Ben Nghe', 'Quan 1', 'Ho Chi Minh', NULL, 800000.00, 0.00, 0.00, 0.00, 800000.00, NULL, NULL, 'atm_card', 'paid', 'pending', NULL, '2026-04-20 01:50:13', '2026-04-22 08:59:58', NULL, NULL, NULL, NULL),
+(21, 4, 'Đào Khả Đại', '20224329@eaut.edu.vn', '0392434402', NULL, 'Thôn 3', 'Dân Lý ', 'Triệu Sơn ', 'Thanh Hóa', NULL, 1100000.00, 0.00, 0.00, 0.00, 1100000.00, NULL, NULL, 'atm_card', 'paid', 'pending', NULL, '2026-04-20 03:18:50', '2026-04-22 08:58:43', NULL, NULL, NULL, NULL),
+(22, 4, 'Đào Khả Đại', '20224329@eaut.edu.vn', '09876567', NULL, 'Thôkhd', 's', 's', 's', NULL, 1800000.00, 0.00, 0.00, 0.00, 1800000.00, NULL, NULL, 'atm_card', 'paid', 'processing', NULL, '2026-04-20 03:58:47', '2026-05-19 05:50:53', NULL, NULL, NULL, NULL),
+(23, 3, 'Đào Khả Huynh', 'dai202648@gmail.com', '09876542', NULL, 'fsfsf', 'sfsf', 'âf', 'âfg', NULL, 600000.00, 0.00, 0.00, 0.00, 600000.00, NULL, NULL, 'atm_card', 'unpaid', 'processing', NULL, '2026-04-21 00:49:30', '2026-04-25 00:49:08', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -267,7 +259,17 @@ INSERT INTO `order_items` (`id`, `order_id`, `product_id`, `variant_id`, `produc
 (10, 10, 2, NULL, 'hkdadad', NULL, 2999999.00, 1, 2999999.00, 'https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg'),
 (11, 11, 2, NULL, 'hkdadad', NULL, 2999999.00, 1, 2999999.00, 'https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg'),
 (12, 12, 2, NULL, 'hkdadad', NULL, 2999999.00, 1, 2999999.00, 'https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg'),
-(13, 13, 2, NULL, 'hkdadad', NULL, 2999999.00, 1, 2999999.00, 'https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg');
+(13, 13, 2, NULL, 'hkdadad', NULL, 2999999.00, 1, 2999999.00, 'https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg'),
+(14, 14, 132, 18, 'Guerlain La Petite Robe Noire', '50ml', 900000.00, 1, 900000.00, 'https://xxivstore.com/wp-content/uploads/2020/06/La-petite-robe-noire-edp.png'),
+(15, 15, 130, 11, 'Chanel No5', '30ml', 800000.00, 1, 800000.00, 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp'),
+(16, 16, 130, 11, 'Chanel No5', '30ml', 800000.00, 1, 800000.00, 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp'),
+(17, 17, 1, 1, 'Test Perfume', '100ml', 500000.00, 1, 500000.00, NULL),
+(18, 18, 130, 11, 'Chanel No5', '30ml', 800000.00, 1, 800000.00, 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp'),
+(19, 19, 1, 1, 'Test', '100ml', 500000.00, 1, 500000.00, NULL),
+(20, 20, 130, 11, 'Chanel No5', '30ml', 800000.00, 1, 800000.00, 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp'),
+(21, 21, 130, 12, 'Chanel No5', '50ml', 1100000.00, 1, 1100000.00, 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp'),
+(22, 22, 130, 13, 'Chanel No5', '100ml', 1800000.00, 1, 1800000.00, 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp'),
+(23, 23, 131, 15, 'Calvin Klein One', '50ml', 600000.00, 1, 600000.00, 'https://orchard.vn/wp-content/uploads/2014/06/calvin-klein-ck-one_2-1.jpg');
 
 -- --------------------------------------------------------
 
@@ -298,7 +300,10 @@ INSERT INTO `password_reset_tokens` (`id`, `user_id`, `otp`, `expires_at`, `used
 (6, 3, '923067', '2026-03-02 10:06:10', 1, '2026-03-02 02:51:10', 'reset'),
 (7, 6, '188072', '2026-03-02 10:20:55', 0, '2026-03-02 03:05:55', 'verify'),
 (8, 7, '972334', '2026-03-25 08:44:02', 0, '2026-03-25 01:29:02', 'verify'),
-(9, 8, '151575', '2026-03-25 08:47:16', 0, '2026-03-25 01:32:16', 'verify');
+(9, 8, '151575', '2026-03-25 08:47:16', 0, '2026-03-25 01:32:16', 'verify'),
+(10, 10, '491774', '2026-04-20 08:24:11', 0, '2026-04-20 01:09:11', 'verify'),
+(11, 11, '349275', '2026-04-20 08:26:08', 0, '2026-04-20 01:11:08', 'verify'),
+(13, 13, '535354', '2026-04-20 08:36:00', 0, '2026-04-20 01:21:00', 'verify');
 
 -- --------------------------------------------------------
 
@@ -325,7 +330,7 @@ CREATE TABLE `posts` (
 --
 
 INSERT INTO `posts` (`id`, `title`, `slug`, `content`, `excerpt`, `cover_image`, `author_id`, `status`, `views`, `created_at`, `updated_at`) VALUES
-(1, 'Hkahdad', 'hkahdad-1772071088322', 'skslladjlajdlajdla', 'jdsjda', 'https://img.freepik.com/premium-photo/bottle-perfume-with-flowers-pink-background_1142458-328.jpg', 1, 'published', 13, '2026-02-26 01:58:08', '2026-03-11 01:25:11');
+(1, 'Hkahdad', 'hkahdad-1772071088322', 'skslladjlajdlajdla', 'jdsjda', 'https://img.freepik.com/premium-photo/bottle-perfume-with-flowers-pink-background_1142458-328.jpg', 1, 'published', 24, '2026-02-26 01:58:08', '2026-04-22 02:34:23');
 
 -- --------------------------------------------------------
 
@@ -367,11 +372,11 @@ INSERT INTO `products` (`id`, `name`, `slug`, `brand_id`, `category_id`, `concen
 (2, 'hkdadad', 'hkdadad-1772066626262', NULL, NULL, NULL, 'hđkad', NULL, 0.00, NULL, NULL, NULL, NULL, NULL, 'https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg', 'SALE', 5.00, 1, 1, 0, '2026-02-26 00:43:46', '2026-03-05 02:03:20'),
 (3, 'POUR MONSIEUR', 'pour-monsieur-1772681422728', 12, NULL, 2, 'Theo Gabrielle Chanel, đây là một phiên bản nam tính vượt trội. Một mùi hương chypre tươi mát vô tận. Lọ nước hoa được bao phủ bởi màu xám của vải fla-nen: thanh lịch, trang trọng, nền nã.\nĐây là loại nước hoa dành cho nam duy nhất được tạo nên bởi Mademoiselle lúc sinh thời, vào năm 1955.', 'THÀNH PHẦN\nMột mùi hương chypre thanh lịch và tinh tế.\nSự bùng nổ hương cam chanh tươi mát với những nốt hương chanh Sicily và hoa cam Tunisia, hé lộ tâm điểm hương cay nồng, sâu thẳm. Một mùi hương gỗ mộc mạc và tinh tế.\n\nCẢM HỨNG\nĐối với dòng nước hoa cho nam đầu tiên, Gabrielle Chanel lấy ý tưởng từ những người đàn ông đã đến trong cuộc đời cô.\n\nBoy Capel, Công tước Dimitri Pavlovich và Công tước xứ Westminster.\n\nBa câu chuyện tình đẹp nhất của cô. Ba người đàn ông tự nhiên, lịch lãm, chân thành, những người đã trau dồi và nuôi dưỡng trong cô nghệ thuật nội tâm độc đáo. Những người đàn ông có trái tim và thần thái.\n\nPOUR MONSIEUR truyền tải sự đơn giản tinh tế này. Đây là phong cách sang trọng kiểu Anh, một sự kết hợp giữa nét quyến rũ quý tộc và tinh tế. Hình ảnh nam tính trường tồn với thời gian.\n\nNGHỆ THUẬT NƯỚC HOA\nPhiên bản Eau de Toilette dạng xịt giúp dễ dàng sử dụng trực tiếp lên da hay quần áo.\n\nSử dụng kết hợp với các sản phẩm sữa tắm và chăm sóc da trong chu trình chăm sóc toàn diện để tăng cường và lưu giữ hương thơm.', 3950000.00, 4390000.00, NULL, NULL, NULL, 'male', 'https://www.chanel.com/images/t_one/w_0.55,h_0.55,c_crop/q_auto:good,f_autoplus,fl_lossy,dpr_1.1/w_1020/pour-monsieur-eau-de-toilette-3-4fl-oz--packshot-default-117460-9564890791966.jpg', 'HOT', 5.00, 0, 1, 0, '2026-03-05 03:30:22', '2026-03-11 03:06:11'),
 (4, 'Dior Sauvage', '', 13, NULL, 6, 'Mùi hương nam tính, hoang dã, lưu hương lâu', 'Nhóm hương: Aromatic Fougère. Hương đầu: Bergamot. Hương cuối: Ambroxan, Cedar.', 800000.00, NULL, NULL, NULL, NULL, 'male', 'https://example.com/images/dior-sauvage.jpg', 'HOT', 4.80, 0, 0, 0, '2026-03-20 06:00:17', '2026-03-20 06:13:41'),
-(129, 'Dior Sauvage', 'dior-sauvage-1774401933026', 13, NULL, 6, 'Mùi hương nam tính, hoang dã, lưu hương lâu', 'Nhóm hương: Aromatic Fougère. Hương đầu: Calabrian Bergamot. Hương giữa: Sichuan Pepper, Lavender. Hương cuối: Ambroxan, Cedar.', 1200000.00, NULL, NULL, NULL, NULL, 'male', 'https://xxivstore.com/wp-content/uploads/2020/05/Nuoc-hoa-Dior-Sauvage-EDT.png', 'HOT', 4.80, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 05:47:56'),
-(130, 'Chanel No5', 'chanel-no5-1774401933033', 12, NULL, 7, 'Biểu tượng nước hoa xa xỉ với hương hoa hồng và hoa nhài tinh tế', 'Nhóm hương: Floral Aldehyde. Hương đầu: Ylang-ylang, Neroli. Hương giữa: Hoa hồng, Hoa nhài. Hương cuối: Civet, Vetiver, Sandalwood.', 1800000.00, 2100000.00, NULL, NULL, NULL, 'female', 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp', 'HOT', 4.90, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 05:54:08'),
-(131, 'Calvin Klein One', 'calvin-klein-one-1774401933048', 23, NULL, 6, 'Hương unisex tươi mát, trẻ trung, phù hợp mọi dịp', 'Nhóm hương: Aromatic Fougère. Hương đầu: Bergamot, Citrus. Hương giữa: Violet, Rose. Hương cuối: Sandalwood, Musk, Amber.', 900000.00, 1100000.00, NULL, NULL, NULL, 'unisex', 'https://orchard.vn/wp-content/uploads/2014/06/calvin-klein-ck-one_2-1.jpg', 'NEW', 4.50, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 05:58:06'),
-(132, 'Guerlain La Petite Robe Noire', 'guerlain-la-petite-robe-noire-1774401933056', 18, NULL, 7, 'Hương thơm nữ tính, ngọt ngào và tinh tế mang phong cách Paris', 'Nhóm hương: Floral Fruity. Hương đầu: Black Cherry, Bergamot. Hương giữa: Almond, Licorice. Hương cuối: Patchouli, Vetiver, White Musk.', 1400000.00, 1700000.00, NULL, NULL, NULL, 'female', 'https://xxivstore.com/wp-content/uploads/2020/06/La-petite-robe-noire-edp.png', 'SALE', 4.70, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 06:00:49'),
-(133, 'YSL Libre', 'ysl-libre-1774401933066', 19, NULL, 7, 'Biểu tượng của tự do và nữ quyền với hương oải hương Pháp quyến rũ', 'Nhóm hương: Floral Woody. Hương đầu: Mandarin, Petitgrain. Hương giữa: Lavender, Orange Blossom. Hương cuối: Musk, Vanilla, Cedarwood.', 1500000.00, NULL, NULL, NULL, NULL, 'female', 'https://example.com/images/ysl-libre.jpg', 'SALE', 4.60, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 01:25:33'),
+(129, 'Dior Sauvage', 'dior-sauvage-1774401933026', 13, NULL, 6, 'Mùi hương nam tính, hoang dã, lưu hương lâu', 'Nhóm hương: Aromatic Fougère. Hương đầu: Calabrian Bergamot. Hương giữa: Sichuan Pepper, Lavender. Hương cuối: Ambroxan, Cedar.', 1200000.00, NULL, NULL, NULL, NULL, 'male', 'https://xxivstore.com/wp-content/uploads/2020/05/Nuoc-hoa-Dior-Sauvage-EDT.png', 'HOT', 5.00, 1, 1, 0, '2026-03-25 01:25:33', '2026-04-22 08:50:46'),
+(130, 'Chanel No5', 'chanel-no5-1774401933033', 12, NULL, 7, 'Biểu tượng nước hoa xa xỉ với hương hoa hồng và hoa nhài tinh tế', 'Nhóm hương: Floral Aldehyde. Hương đầu: Ylang-ylang, Neroli. Hương giữa: Hoa hồng, Hoa nhài. Hương cuối: Civet, Vetiver, Sandalwood.', 1800000.00, 2100000.00, NULL, NULL, NULL, 'female', 'https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp', 'HOT', 5.00, 2, 1, 0, '2026-03-25 01:25:33', '2026-04-22 10:01:33'),
+(131, 'Calvin Klein One', 'calvin-klein-one-1774401933048', 23, NULL, 6, 'Hương unisex tươi mát, trẻ trung, phù hợp mọi dịp', 'Nhóm hương: Aromatic Fougère. Hương đầu: Bergamot, Citrus. Hương giữa: Violet, Rose. Hương cuối: Sandalwood, Musk, Amber.', 900000.00, 1100000.00, NULL, NULL, NULL, 'unisex', 'https://orchard.vn/wp-content/uploads/2014/06/calvin-klein-ck-one_2-1.jpg', 'NEW', 5.00, 1, 1, 0, '2026-03-25 01:25:33', '2026-04-22 08:50:46'),
+(132, 'Guerlain La Petite Robe Noire', 'guerlain-la-petite-robe-noire-1774401933056', 18, NULL, 7, 'Hương thơm nữ tính, ngọt ngào và tinh tế mang phong cách Paris', 'Nhóm hương: Floral Fruity. Hương đầu: Black Cherry, Bergamot. Hương giữa: Almond, Licorice. Hương cuối: Patchouli, Vetiver, White Musk.', 1400000.00, 1700000.00, NULL, NULL, NULL, 'female', 'https://xxivstore.com/wp-content/uploads/2020/06/La-petite-robe-noire-edp.png', 'SALE', 5.00, 1, 1, 0, '2026-03-25 01:25:33', '2026-04-22 02:17:35'),
+(133, 'YSL Libre', 'ysl-libre-1774401933066', 19, NULL, 7, 'Biểu tượng của tự do và nữ quyền với hương oải hương Pháp quyến rũ', 'Nhóm hương: Floral Woody. Hương đầu: Mandarin, Petitgrain. Hương giữa: Lavender, Orange Blossom. Hương cuối: Musk, Vanilla, Cedarwood.', 1500000.00, 1800000.00, NULL, NULL, NULL, 'female', '/uploads/thiep-moi-ky-yeu-2026 (3)-1776674509905-91787231.png', 'SALE', 4.60, 0, 1, 0, '2026-03-25 01:25:33', '2026-04-20 08:42:02'),
 (134, 'Tom Ford Black Orchid', 'tom-ford-black-orchid-1774401933075', 14, NULL, 7, 'Sang trọng, bí ẩn với hương lan đen quyến rũ và gỗ ấm áp', 'Nhóm hương: Oriental Floral. Hương đầu: Truffle, Ylang-ylang. Hương giữa: Black Orchid, Lotus. Hương cuối: Patchouli, Sandalwood, Vanilla.', 3000000.00, NULL, NULL, NULL, NULL, 'unisex', 'https://example.com/images/tf-black-orchid.jpg', 'NEW', 4.70, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 01:25:33'),
 (135, 'Versace Eros Flame', 'versace-eros-flame-1774401933084', 16, NULL, 7, 'Nam tính, đam mê với gỗ ấm và hương cam quýt bùng nổ', 'Nhóm hương: Woody Spicy. Hương đầu: Lemon, Neroli, Pepper. Hương giữa: Rosewood, Geranium. Hương cuối: Tonka Bean, Sandalwood, Musk.', 1400000.00, NULL, NULL, NULL, NULL, 'male', 'https://example.com/images/versace-eros.jpg', 'HOT', 4.50, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 01:25:33'),
 (136, 'Giorgio Armani Acqua di Gio', 'giorgio-armani-acqua-di-gio-1774401933094', 21, NULL, 6, 'Hương nước biển trong lành, tươi mát – lựa chọn hàng đầu cho quý ông năng động', 'Nhóm hương: Aquatic Aromatic. Hương đầu: Bergamot, Neroli, Sea Notes. Hương giữa: Rosemary, Persimmon. Hương cuối: Patchouli, White Musk.', 1100000.00, NULL, NULL, NULL, NULL, 'male', 'https://example.com/images/armani-acqua.jpg', 'HOT', 4.70, 0, 1, 0, '2026-03-25 01:25:33', '2026-03-25 01:25:33'),
@@ -441,9 +446,9 @@ INSERT INTO `product_variants` (`id`, `product_id`, `size_label`, `price`, `old_
 (4, 3, '30ml', 2890000.00, 3490000.00, 100, NULL, 1),
 (5, 3, '70ml', 2890000.00, 3490000.00, 100, NULL, 1),
 (6, 3, '100ml', 3950000.00, 4390000.00, 101, NULL, 1),
-(7, 4, '50ml', 800000.00, 950000.00, 75, 'DIOR-SAUV-001', 1),
-(8, 4, '100ml', 1200000.00, 1500000.00, 50, 'DIOR-SAUV-002', 1),
-(9, 4, '200ml', 1800000.00, 2100000.00, 20, 'DIOR-SAUV-003', 1),
+(7, 4, '50ml', 800000.00, 950000.00, 75, 'DIOR-SAUV-001', 0),
+(8, 4, '100ml', 1200000.00, 1500000.00, 50, 'DIOR-SAUV-002', 0),
+(9, 4, '200ml', 1800000.00, 2100000.00, 20, 'DIOR-SAUV-003', 0),
 (11, 130, '30ml', 800000.00, 950000.00, 50, 'CHANEL-NO5-001', 1),
 (12, 130, '50ml', 1100000.00, 1300000.00, 40, 'CHANEL-NO5-002', 1),
 (13, 130, '100ml', 1800000.00, 2100000.00, 25, 'CHANEL-NO5-003', 1),
@@ -470,7 +475,9 @@ INSERT INTO `product_variants` (`id`, `product_id`, `size_label`, `price`, `old_
 (34, 137, '100ml', 1900000.00, 2300000.00, 18, 'HER-TWI-003', 1),
 (35, 138, '30ml', 620000.00, 750000.00, 45, 'LAN-LVB-001', 1),
 (36, 138, '50ml', 850000.00, 1000000.00, 35, 'LAN-LVB-002', 1),
-(37, 138, '100ml', 1300000.00, 1600000.00, 25, 'LAN-LVB-003', 1);
+(37, 138, '100ml', 1300000.00, 1600000.00, 25, 'LAN-LVB-003', 1),
+(38, 129, '30ml', 900000.00, 1300000.00, 40, NULL, 1),
+(39, 129, '70ml', 2290000.00, 3390000.00, 100, NULL, 1);
 
 -- --------------------------------------------------------
 
@@ -522,7 +529,13 @@ CREATE TABLE `reviews` (
 --
 
 INSERT INTO `reviews` (`id`, `product_id`, `user_id`, `author_name`, `rating`, `comment`, `is_approved`, `created_at`) VALUES
-(1, 2, 3, 'Đào Khả Huynh', 5, 'rất tốt', 1, '2026-03-05 02:03:06');
+(1, 2, 3, 'Đào Khả Huynh', 5, 'rất tốt', 1, '2026-03-05 02:03:06'),
+(2, 132, 4, 'Đào Khả Đại', 5, 'cưefwfwf', 1, '2026-04-22 02:17:15'),
+(3, 130, 4, 'Đào Khả Đại', 5, 'hcshcskc', 1, '2026-04-22 08:20:46'),
+(4, 129, 4, 'Đào Khả Đại', 5, 'scacac', 1, '2026-04-22 08:37:06'),
+(7, 131, 4, 'Đào Khả Đại', 5, 'ghjghg', 1, '2026-04-22 08:50:33'),
+(10, 129, 3, 'Đào Khả Huynh', 5, 'ssfsf', 1, '2026-04-22 09:51:15'),
+(11, 130, 3, 'Đào Khả Huynh', 5, 'Sản phẩm rất tốt', 1, '2026-04-22 10:01:07');
 
 -- --------------------------------------------------------
 
@@ -542,9 +555,11 @@ CREATE TABLE `shopping_carts` (
 --
 
 INSERT INTO `shopping_carts` (`id`, `user_id`, `items`, `updated_at`) VALUES
-(1, 3, '[]', '2026-04-14 01:41:20'),
-(2, 4, '[{\"product_id\":130,\"variant_id\":11,\"product_name\":\"Chanel No5\",\"brand\":\"Chanel\",\"size_label\":\"30ml\",\"unit_price\":\"800000.00\",\"image_url\":\"https://nuochoamc.com/upload/images/san-pham/79/chanel-no5-edp-100ml2.webp\",\"quantity\":1,\"id\":1774750368244}]', '2026-04-14 00:55:25'),
-(3, 1, '[]', '2026-04-14 00:55:00');
+(1, 3, '[]', '2026-05-03 09:50:36'),
+(2, 4, '[{\"product_id\":129,\"variant_id\":null,\"product_name\":\"Dior Sauvage\",\"brand\":\"Dior\",\"size_label\":null,\"unit_price\":\"1200000.00\",\"image_url\":\"https://xxivstore.com/wp-content/uploads/2020/05/Nuoc-hoa-Dior-Sauvage-EDT.png\",\"quantity\":1,\"id\":1779172646166},{\"product_id\":132,\"variant_id\":18,\"product_name\":\"Guerlain La Petite Robe Noire\",\"brand\":\"Guerlain\",\"size_label\":\"50ml\",\"unit_price\":\"900000.00\",\"image_url\":\"https://xxivstore.com/wp-content/uploads/2020/06/La-petite-robe-noire-edp.png\",\"quantity\":1,\"id\":1779202414138},{\"product_id\":2,\"variant_id\":1,\"product_name\":\"hkdadad\",\"brand\":null,\"size_label\":\"30ml\",\"unit_price\":\"1000000.00\",\"image_url\":\"https://phucnguyen.vn/wp-content/uploads/2020/06/nong-do-trong-nuoc-hoa.jpg\",\"quantity\":1,\"id\":1779239887254}]', '2026-05-20 02:03:36'),
+(3, 1, '[]', '2026-05-19 06:38:39'),
+(4, 9, '[]', '2026-04-17 01:53:51'),
+(5, 14, '[]', '2026-04-25 02:07:48');
 
 -- --------------------------------------------------------
 
@@ -572,31 +587,23 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `phone`, `avatar_url`, `role`, `is_active`, `created_at`, `updated_at`, `google_id`, `avatar_url_oauth`) VALUES
-(1, 'Admin', 'admin@parfume.vn', '$2y$12$AgdD1s2kNQDLKMdryONBZuuZsWqI5tfnxsrBZ2vNTUf4NsuMk5guq', NULL, NULL, 'admin', 1, '2026-02-25 02:21:28', '2026-02-24 19:50:26', NULL, NULL),
-(2, 'Đào Khả Đại', '29@eaut.edu.vn', '$2y$12$3EZUaDAeimZAPxsmF061LOvEYeV9w6Qfn4Yg8ShU2UOvtwGMn6Uj2', '093723727', NULL, 'customer', 1, '2026-02-24 20:11:41', '2026-02-24 20:11:41', NULL, NULL),
+(1, 'Admin', 'admin@parfume.vn', '$2b$12$UkFdReTg2Mhl9NsoTqnQMe515aksUH4VO4nj2AXtuoy.EIVeKeB9S', NULL, NULL, 'admin', 1, '2026-02-25 02:21:28', '2026-04-23 02:48:21', NULL, NULL),
+(2, 'Đào Khả Đại', '29@eaut.edu.vn', '$2y$12$3EZUaDAeimZAPxsmF061LOvEYeV9w6Qfn4Yg8ShU2UOvtwGMn6Uj2', '093723727', NULL, 'customer', 0, '2026-02-24 20:11:41', '2026-04-23 09:25:41', NULL, NULL),
 (3, 'Đào Khả Huynh', 'dai202648@gmail.com', '$2b$12$nV5yMCjy49LbmhDZ9UmWHe8KIUmauMgLXqZvNzIH90hogwiCJ28Ge', '09876542', 'https://lh3.googleusercontent.com/a/ACg8ocKni_Bv3LnDz_aXOfoTGcDG9SXonb69ePqfCG3ZDYthuoXNZQ=s96-c', 'customer', 1, '2026-02-26 02:04:19', '2026-03-02 02:52:39', '107406928427555749785', NULL),
-(4, 'Đào Khả Đại', '20224329@eaut.edu.vn', '$2b$12$wYwEm/rMZ5JOQZENj38fJOTTGF3keWsSxH0I0mzF17q0MDqM6z4bG', NULL, 'https://lh3.googleusercontent.com/a/ACg8ocINSyfvdmDlfD5KymnvljseLwL49h0024Vesm6USyIc957rQw=s96-c', 'customer', 1, '2026-03-02 02:06:59', '2026-03-02 02:21:48', '108398461368192881153', NULL),
-(5, 'Khả Cường Đào', 'daokhacuong78@gmail.com', NULL, NULL, 'https://lh3.googleusercontent.com/a/ACg8ocJHeaM3jPq06vpgk-CNGQelBcG230WxmFYIk0m5SsLpDlzG4Q=s96-c', 'customer', 1, '2026-03-02 02:12:19', '2026-03-02 02:12:19', '108659664479230808509', NULL),
+(4, 'Đào Khả Đại', '20224329@eaut.edu.vn', '$2b$12$wYwEm/rMZ5JOQZENj38fJOTTGF3keWsSxH0I0mzF17q0MDqM6z4bG', NULL, 'https://lh3.googleusercontent.com/a/ACg8ocINSyfvdmDlfD5KymnvljseLwL49h0024Vesm6USyIc957rQw=s96-c', 'customer', 1, '2026-03-02 02:06:59', '2026-04-23 09:31:28', '108398461368192881153', NULL),
+(5, 'Khả Cường Đào', 'daokhacuong78@gmail.com', NULL, NULL, 'https://lh3.googleusercontent.com/a/ACg8ocJHeaM3jPq06vpgk-CNGQelBcG230WxmFYIk0m5SsLpDlzG4Q=s96-c', 'customer', 1, '2026-03-02 02:12:19', '2026-04-23 09:25:36', '108659664479230808509', NULL),
 (6, 'Đào Khả Dung', 'dwjdwdjowd@gmail.com', '$2b$12$8tlEYg6Y0lhBIOxrqN99butIqtYky7ag1afO8SyqKpAqL4ABQY0gy', '09876545', NULL, 'customer', 0, '2026-03-02 03:05:55', '2026-03-02 03:05:55', NULL, NULL),
 (7, 'Admin TesterAdmin Tester', 'admin@admin.com', '$2b$12$x8Fpf2UVEtbQcfesUc9M.ufq6qLlJSGieXF.VmK/RZRob6tpJ7Qx.', '0123456789', NULL, 'customer', 0, '2026-03-25 01:29:02', '2026-03-25 01:29:02', NULL, NULL),
-(8, 'Test Admin', 'testadmin@example.com', '$2b$12$i3urkUwUkkEDR4v1hgm9Be48wjyxcwVQp/6zyTIokMHLnK3kkAXgW', '0987654321', NULL, 'customer', 0, '2026-03-25 01:32:16', '2026-03-25 01:32:16', NULL, NULL);
+(8, 'Test Admin', 'testadmin@example.com', '$2b$12$i3urkUwUkkEDR4v1hgm9Be48wjyxcwVQp/6zyTIokMHLnK3kkAXgW', '0987654321', NULL, 'customer', 0, '2026-03-25 01:32:16', '2026-03-25 01:32:16', NULL, NULL),
+(9, 'Test Customer', 'test@example.com', '$2b$12$/HZo1nLuEJDjJOfR4liUNeyA9NoCBKWLUfADgbaGymSvjIzk5kkVC', '0987654321', NULL, 'customer', 1, '2026-04-17 01:52:33', '2026-04-17 01:52:33', NULL, NULL),
+(10, 'Nguyen Van Test', 'testmomo@example.com', '$2b$12$UU8HT8GLOq9DYwoqM7Vn.OUe9yLr.poDMSdiuBztbFjTkqBuyBx.e', '0901234567', NULL, 'customer', 0, '2026-04-20 01:09:11', '2026-04-20 01:09:11', NULL, NULL),
+(11, 'Nguyen Van Test', 'testmomo4@example.com', '$2b$12$maiUlKwFHyZfvNa08d/SH.AyIHTeZpJvF.iwBuHb.oBOvmJhiiat2', '0912345678', NULL, 'customer', 0, '2026-04-20 01:11:08', '2026-04-20 01:11:08', NULL, NULL),
+(13, 'Nguyen Van Test', 'test@gmail.com', '$2b$12$F7HnfZLxGkBJ/8Sty4mGsO/x3Oc0AqcFlwRDZ2GskMe9u.wgdFiKy', '0901234567', NULL, 'customer', 0, '2026-04-20 01:21:00', '2026-04-23 09:17:13', NULL, NULL),
+(14, 'Đào thu Phương', '9@eaut.edu.vn', '$2b$12$JO6fKQmqdBifzV28HX9LpOXYFtS8gPpErUejH.XXDgAYRX5LH3Pa6', '09877887668', NULL, 'staff', 1, '2026-04-23 09:49:19', '2026-04-23 09:49:19', NULL, NULL);
 
 --
 -- Indexes for dumped tables
 --
-
---
--- Indexes for table `addresses`
---
-ALTER TABLE `addresses`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_addresses_user` (`user_id`);
-
---
--- Indexes for table `banners`
---
-ALTER TABLE `banners`
-  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `brands`
@@ -634,13 +641,6 @@ ALTER TABLE `concentrations`
 ALTER TABLE `contacts`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_contacts_email` (`email`);
-
---
--- Indexes for table `fragrance_notes`
---
-ALTER TABLE `fragrance_notes`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_notes_product` (`product_id`);
 
 --
 -- Indexes for table `orders`
@@ -736,18 +736,6 @@ ALTER TABLE `users`
 --
 
 --
--- AUTO_INCREMENT for table `addresses`
---
-ALTER TABLE `addresses`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `banners`
---
-ALTER TABLE `banners`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `brands`
 --
 ALTER TABLE `brands`
@@ -763,7 +751,7 @@ ALTER TABLE `categories`
 -- AUTO_INCREMENT for table `comments`
 --
 ALTER TABLE `comments`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `concentrations`
@@ -775,31 +763,25 @@ ALTER TABLE `concentrations`
 -- AUTO_INCREMENT for table `contacts`
 --
 ALTER TABLE `contacts`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `fragrance_notes`
---
-ALTER TABLE `fragrance_notes`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `order_items`
 --
 ALTER TABLE `order_items`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `password_reset_tokens`
 --
 ALTER TABLE `password_reset_tokens`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `posts`
@@ -817,13 +799,13 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `product_images`
 --
 ALTER TABLE `product_images`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `product_variants`
 --
 ALTER TABLE `product_variants`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `promo_codes`
@@ -841,35 +823,23 @@ ALTER TABLE `reviews`
 -- AUTO_INCREMENT for table `shopping_carts`
 --
 ALTER TABLE `shopping_carts`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- Constraints for dumped tables
 --
 
 --
--- Constraints for table `addresses`
---
-ALTER TABLE `addresses`
-  ADD CONSTRAINT `fk_addresses_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
-
---
 -- Constraints for table `categories`
 --
 ALTER TABLE `categories`
   ADD CONSTRAINT `fk_categories_parent` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL;
-
---
--- Constraints for table `fragrance_notes`
---
-ALTER TABLE `fragrance_notes`
-  ADD CONSTRAINT `fk_notes_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `orders`

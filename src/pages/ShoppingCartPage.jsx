@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Minus, X, Tag, Lock, ArrowRight, Loader2, CheckCircle, Truck, QrCode, Landmark } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { formatVND } from '../utils/currency'
-import { promoAPI, ordersAPI } from '../utils/api'
+import { ordersAPI } from '../utils/api'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
@@ -20,11 +20,6 @@ export default function ShoppingCartPage() {
   const navigate = useNavigate()
   const { items: cartItems, updateQty, removeItem, clearCart } = useCart()
 
-  const [promoCode, setPromoCode]   = useState('')
-  const [promoLoading, setPromoLoading] = useState(false)
-  const [appliedPromo, setAppliedPromo] = useState(null)
-  const [promoError, setPromoError] = useState('')
-
   const [checkoutOpen, setCheckoutOpen] = useState(false)
   const [orderForm, setOrderForm]       = useState({
     customer_name: '', customer_email: '', customer_phone: '',
@@ -40,23 +35,8 @@ export default function ShoppingCartPage() {
 
   const subtotal = cartItems.reduce((s, i) => s + i.unit_price * i.quantity, 0)
   const shipping = 0
-  const discount = appliedPromo ? appliedPromo.discount_amount : 0
+  const discount = 0
   const total    = subtotal - discount + shipping
-
-  const applyPromo = async () => {
-    if (!promoCode.trim()) return
-    setPromoLoading(true)
-    setPromoError('')
-    try {
-      const res = await promoAPI.validate(promoCode.trim(), subtotal)
-      setAppliedPromo(res.data)
-    } catch (err) {
-      setPromoError(err.message)
-      setAppliedPromo(null)
-    } finally {
-      setPromoLoading(false)
-    }
-  }
 
   const openCheckout = () => {
     if (!user) { navigate('/login?redirect=/cart'); return }
@@ -99,12 +79,10 @@ export default function ShoppingCartPage() {
         subtotal,
         discount_amount: discount,
         shipping_fee:    shipping,
-        promo_code: appliedPromo?.code || undefined,
       }
       const res = await ordersAPI.create(payload)
       const newOrderId = res.data.id
       clearCart()
-      setAppliedPromo(null)
       // For ATM / VietQR → redirect to dedicated payment page
       if (['atm_card', 'vietqr'].includes(orderForm.payment_method)) {
         navigate(
@@ -192,36 +170,6 @@ export default function ShoppingCartPage() {
                   <span>Vận chuyển:</span>
                   <span className="text-green-400 font-semibold">MIỄN PHÍ</span>
                 </div>
-                {appliedPromo && (
-                  <div className="flex justify-between text-xs xs:text-sm text-green-400">
-                    <span>Giảm giá ({appliedPromo.code}):</span>
-                    <span className="font-semibold">-{formatVND(discount)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Promo Code */}
-              <div className="border-t border-dark-800 pt-3 xs:pt-4 mb-4 xs:mb-4">
-                <label className="block text-xs xs:text-sm font-semibold mb-1.5 xs:mb-2">MÃ KHUYẾN MÃI</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={e => { setPromoCode(e.target.value); setPromoError('') }}
-                    placeholder="Nhập mã"
-                    className="flex-1 px-2.5 xs:px-3 py-1.5 xs:py-2 bg-dark-800 border border-dark-700 rounded-lg text-xs xs:text-sm focus:outline-none focus:border-primary-600"
-                  />
-                  <button
-                    onClick={applyPromo}
-                    disabled={promoLoading}
-                    className="px-2.5 xs:px-3 py-1.5 xs:py-2 bg-dark-700 hover:bg-dark-600 border border-dark-600 rounded-lg text-xs xs:text-sm font-semibold transition disabled:opacity-50 flex items-center gap-1 touch-target"
-                  >
-                    {promoLoading ? <Loader2 size={12} className="xs:w-3 xs:h-3 animate-spin" /> : null}
-                    <span className="hidden xs:inline">ÁP DỤNG</span>
-                  </button>
-                </div>
-                {promoError && <p className="text-red-400 text-[10px] xs:text-xs mt-1">{promoError}</p>}
-                {appliedPromo && <p className="text-green-400 text-[10px] xs:text-xs mt-1">Đã áp dụng mã {appliedPromo.code}!</p>}
               </div>
 
               <div className="border-t border-dark-800 pt-3 xs:pt-4 mb-4 xs:mb-6">

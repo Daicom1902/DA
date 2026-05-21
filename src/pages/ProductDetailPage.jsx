@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   Heart, Star, Plus, Minus, ShoppingCart,
@@ -38,6 +38,31 @@ export default function ProductDetailPage() {
   const [reviewError, setReviewError]       = useState('')
 
   const [detailsOpen, setDetailsOpen]       = useState(true)
+  const [imageCollapsed, setImageCollapsed] = useState(false)
+
+  // Refs for IntersectionObserver
+  const imageGalleryRef = useRef(null)
+  const actionButtonsRef = useRef(null)
+
+  // Collapse image gallery on mobile when action buttons come into view
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1023px)')
+    if (!mql.matches) return
+
+    const target = actionButtonsRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // When action buttons are intersecting (visible), collapse image
+        setImageCollapsed(entry.isIntersecting)
+      },
+      { threshold: 0.3 }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [product])
 
   useEffect(() => {
     setLoading(true)
@@ -222,7 +247,10 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xs:gap-8 sm:gap-10 md:gap-12 lg:gap-12 mb-12 sm:mb-16 lg:mb-20">
 
           {/* ── Product Images ─────────────────────── */}
-          <div className="space-y-2 xs:space-y-3 sm:space-y-4">
+          <div
+            ref={imageGalleryRef}
+            className={`space-y-2 xs:space-y-3 sm:space-y-4 product-image-gallery ${imageCollapsed ? 'gallery-collapsed' : ''}`}
+          >
             {/* Main image */}
             <div className="relative bg-gradient-to-br from-amber-50 to-rose-50 rounded-2xl overflow-hidden aspect-square group cursor-pointer"
               onClick={() => setLightbox(true)}
@@ -404,7 +432,7 @@ export default function ProductDetailPage() {
             )}
 
             {/* Quantity + Actions */}
-            <div className="space-y-3 xs:space-y-4">
+            <div ref={actionButtonsRef} className="space-y-3 xs:space-y-4">
               <div className="flex items-center gap-3 xs:gap-4">
                 <span className="text-xs font-bold uppercase tracking-widest text-gray-400 w-16 xs:w-20 shrink-0">Số lượng</span>
                 <div className="flex items-center bg-dark-800 border border-dark-700 rounded-2xl overflow-hidden">

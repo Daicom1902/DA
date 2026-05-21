@@ -8,7 +8,7 @@ import { brandsAPI, productsAPI } from '../utils/api'
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [collectionsOpen, setCollectionsOpen] = useState(false)
-  const [giftsOpen, setGiftsOpen] = useState(false)
+
   const [brands, setBrands] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -211,13 +211,13 @@ export default function Header() {
                   {/* Column 3 - Loại nước hoa */}
                   <div>
                     <h3 className="text-primary-400 font-bold text-sm mb-3 uppercase">Phân loại</h3>
-                    <Link to="/catalog" className="block py-2 text-gray-300 hover:text-white transition text-sm">
+                    <Link to="/catalog?gender=female" className="block py-2 text-gray-300 hover:text-white transition text-sm">
                       Nước hoa nữ
                     </Link>
-                    <Link to="/catalog" className="block py-2 text-gray-300 hover:text-white transition text-sm">
+                    <Link to="/catalog?gender=male" className="block py-2 text-gray-300 hover:text-white transition text-sm">
                       Nước hoa nam
                     </Link>
-                    <Link to="/catalog" className="block py-2 text-gray-300 hover:text-white transition text-sm">
+                    <Link to="/catalog?gender=unisex" className="block py-2 text-gray-300 hover:text-white transition text-sm">
                       Nước hoa unisex
                     </Link>
                     <Link to="/catalog" className="block py-2 text-gray-300 hover:text-white transition text-sm">
@@ -253,35 +253,6 @@ export default function Header() {
             {/* Contact Link */}
             <Link to="/contact" className="nav-link text-gray-300 hover:text-white">Liên hệ</Link>
 
-            {/* Gifts Dropdown */}
-            <div className="relative mega-menu-trigger">
-              <a href="#" className="nav-link text-gray-300 hover:text-white flex items-center gap-1">
-                Quà tặng
-                <svg className="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </a>
-              <div className="mega-menu absolute top-full right-0 mt-2 w-56 rounded-xl shadow-2xl z-50">
-                <div className="py-2">
-                  <Link to="/catalog" className="block px-4 py-3 text-gray-300 hover:bg-dark-700 hover:text-white transition">
-                    <div className="font-semibold">Bộ quà tặng</div>
-                    <div className="text-xs text-gray-500">Gói quà sang trọng</div>
-                  </Link>
-                  <Link to="/catalog" className="block px-4 py-3 text-gray-300 hover:bg-dark-700 hover:text-white transition">
-                    <div className="font-semibold">Quà tặng sinh nhật</div>
-                    <div className="text-xs text-gray-500">Ý nghĩa và đặc biệt</div>
-                  </Link>
-                  <Link to="/catalog" className="block px-4 py-3 text-gray-300 hover:bg-dark-700 hover:text-white transition">
-                    <div className="font-semibold">Quà tặng doanh nghiệp</div>
-                    <div className="text-xs text-gray-500">Chuyên nghiệp và lịch sự</div>
-                  </Link>
-                  <Link to="/catalog" className="block px-4 py-3 text-gray-300 hover:bg-dark-700 hover:text-white transition">
-                    <div className="font-semibold">Bộ khám phá</div>
-                    <div className="text-xs text-gray-500">Trải nghiệm đa dạng</div>
-                  </Link>
-                </div>
-              </div>
-            </div>
           </nav>
 
           {/* Actions */}
@@ -418,13 +389,13 @@ export default function Header() {
                   {/* Phân loại */}
                   <div className="px-4 py-2 border-t border-dark-800">
                     <p className="text-primary-400 text-xs font-bold uppercase mb-2">Phân loại</p>
-                    <Link to="/catalog" className="block py-2 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/catalog?gender=female" className="block py-2 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
                       Nước hoa nữ
                     </Link>
-                    <Link to="/catalog" className="block py-2 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/catalog?gender=male" className="block py-2 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
                       Nước hoa nam
                     </Link>
-                    <Link to="/catalog" className="block py-2 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
+                    <Link to="/catalog?gender=unisex" className="block py-2 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
                       Nước hoa unisex
                     </Link>
                   </div>               
@@ -472,40 +443,6 @@ export default function Header() {
               </>
             )}
 
-            {/* Gifts - Link + Dropdown Arrow */}
-            <div>
-              <div className="flex items-center hover:bg-dark-800 transition">
-                <Link
-                  to="/catalog"
-                  className="flex-1 py-3 text-gray-300 hover:text-white transition px-4"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Quà tặng
-                </Link>
-                <button
-                  onClick={() => setGiftsOpen(!giftsOpen)}
-                  className="py-3 px-4 text-gray-400 hover:text-white transition"
-                >
-                  {giftsOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                </button>
-              </div>
-              {giftsOpen && (
-                <div className="bg-dark-900 py-2">
-                  <Link to="/catalog" className="block py-3 px-6 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
-                    Bộ quà tặng
-                  </Link>
-                  <Link to="/catalog" className="block py-3 px-6 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
-                    Quà tặng sinh nhật
-                  </Link>
-                  <Link to="/catalog" className="block py-3 px-6 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
-                    Quà tặng doanh nghiệp
-                  </Link>
-                  <Link to="/catalog" className="block py-3 px-6 text-sm text-gray-400 hover:text-white" onClick={() => setMobileMenuOpen(false)}>
-                    Bộ khám phá
-                  </Link>
-                </div>
-              )}
-            </div>
 
             {/* CTA Button */}
             <div className="px-4 pt-4">

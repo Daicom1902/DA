@@ -13,7 +13,7 @@ import brandsRouter  from './routes/brands.js'
 import concentrationsRouter from './routes/concentrations.js'
 import ordersRouter  from './routes/orders.js'
 import contactRouter from './routes/contact.js'
-import promoRouter   from './routes/promo.js'
+
 import adminRouter   from './routes/admin.js'
 import postsRouter   from './routes/posts.js'
 import chatRouter    from './routes/chat.js'
@@ -52,7 +52,7 @@ app.use('/api/brands',          brandsRouter)
 app.use('/api/concentrations',  concentrationsRouter)
 app.use('/api/orders',   ordersRouter)
 app.use('/api/contact',  contactRouter)
-app.use('/api/promo',    promoRouter)
+
 app.use('/api/admin',    adminRouter)
 app.use('/api/posts',    postsRouter)
 app.use('/api/chat',     chatRouter)

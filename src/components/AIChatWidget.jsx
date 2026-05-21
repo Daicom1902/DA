@@ -10,7 +10,6 @@ const SUGGESTIONS = [
   '💐 Tư vấn nước hoa nữ',
   '🌿 Nước hoa mùa hè',
   '🎩 Nước hoa nam cao cấp',
-  '💝 Quà tặng người yêu',
   '💼 Nước hoa đi làm',
   '✨ Nước hoa bán chạy',
 ]

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import pool from '../db.js'
 import { authMiddleware, adminOnly, staffOrAbove } from '../middleware/auth.js'
-import { Anthropic } from '@anthropic-ai/sdk'
+import Anthropic from '@anthropic-ai/sdk'
 
 const router = Router()
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null

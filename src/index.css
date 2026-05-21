@@ -339,6 +339,28 @@
   }
 }
 
+/* ── Product Image Gallery Collapse (Mobile) ───────────────────────────── */
+@media (max-width: 1023px) {
+  .product-image-gallery {
+    max-height: 2000px; /* large enough to hold any gallery */
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.35s ease,
+                margin 0.4s ease,
+                padding 0.4s ease;
+    will-change: max-height, opacity;
+  }
+
+  .product-image-gallery.gallery-collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    pointer-events: none;
+  }
+}
+
 /* ── Sticky Mobile CTA (Product Detail) ────────────────────────────────── */
 .sticky-mobile-cta {
   position: fixed;
