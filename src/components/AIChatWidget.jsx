@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './AIChatWidget.css'
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API_BASE = '/api'
 const REQUEST_TIMEOUT_MS = 18000
 const REQUEST_RETRY_COUNT = 1
 
@@ -208,7 +208,7 @@ export default function AIChatWidget() {
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
     try {
-      const res = await fetch(`${API}/api/chat`, {
+      const res = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

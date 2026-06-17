@@ -12,7 +12,7 @@ import { formatVND } from '../utils/currency'
 // ── Status / Payment maps ─────────────────────────────────────────────────
 const PAYMENT_METHOD = {
   cod:      { label: 'COD',             Icon: Truck    },
-  atm_card: { label: 'Thẻ ATM (VNPay)',  Icon: Landmark },
+  atm_card: { label: 'Thẻ ATM (MoMo)',   Icon: Landmark },
   vietqr:   { label: 'VietQR',          Icon: QrCode   },
 }
 

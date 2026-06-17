@@ -11,7 +11,7 @@ const STATUSES = [
   { value: 'cancelled', label: 'Đã huỷ',    cls: 'bg-red-500/20     text-red-400     border-red-500/30'    },
 ]
 
-const PAY_METHODS = { cod: 'COD', atm_card: 'Thẻ ATM (VNPay)', vietqr: 'VietQR' }
+const PAY_METHODS = { cod: 'COD', atm_card: 'Thẻ ATM (MoMo)', vietqr: 'VietQR' }
 
 const getStatus = (val) => STATUSES.find(s => s.value === val) || STATUSES[0]
 

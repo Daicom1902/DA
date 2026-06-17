@@ -131,7 +131,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-// PUT /api/orders/:id/pay  — confirm payment (momo / vnpay simulation)
+// PUT /api/orders/:id/pay  — confirm payment (momo)
 // Note: Allows both guest (no auth) and authenticated users to confirm payment
 router.put('/:id/pay', async (req, res) => {
   try {

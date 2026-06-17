@@ -304,29 +304,57 @@ async function callAI(systemPrompt, messages, userMessage = '') {
 
 // ── Lấy sản phẩm từ DB làm context cho AI ──────────────────────────────
 async function getProductContext() {
-  const [rows] = await pool.query(`
-    SELECT p.id, p.name, p.price, p.old_price, p.description, p.gender,
-           p.image, p.rating, p.review_count, p.badge,
-           b.name AS brand,
-           c.name AS category,
-           co.name AS concentration,
-           (SELECT GROUP_CONCAT(fn.note SEPARATOR ', ')
-            FROM fragrance_notes fn WHERE fn.product_id = p.id AND fn.layer = 'top') AS top_notes,
-           (SELECT GROUP_CONCAT(fn.note SEPARATOR ', ')
-            FROM fragrance_notes fn WHERE fn.product_id = p.id AND fn.layer = 'heart') AS heart_notes,
-           (SELECT GROUP_CONCAT(fn.note SEPARATOR ', ')
-            FROM fragrance_notes fn WHERE fn.product_id = p.id AND fn.layer = 'base') AS base_notes,
-           (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS min_variant_price,
-           (SELECT MAX(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS max_variant_price
-    FROM products p
-    LEFT JOIN brands         b  ON b.id  = p.brand_id
-    LEFT JOIN categories     c  ON c.id  = p.category_id
-    LEFT JOIN concentrations co ON co.id = p.concentration_id
-    WHERE p.is_active = 1
-    ORDER BY p.is_featured DESC, p.rating DESC
-    LIMIT 100
-  `)
-  return rows
+  try {
+    const [rows] = await pool.query(`
+      SELECT p.id, p.name, p.price, p.old_price, p.description, p.gender,
+             p.image, p.rating, p.review_count, p.badge,
+             b.name AS brand,
+             c.name AS category,
+             co.name AS concentration,
+             (SELECT GROUP_CONCAT(fn.note SEPARATOR ', ')
+              FROM fragrance_notes fn WHERE fn.product_id = p.id AND fn.layer = 'top') AS top_notes,
+             (SELECT GROUP_CONCAT(fn.note SEPARATOR ', ')
+              FROM fragrance_notes fn WHERE fn.product_id = p.id AND fn.layer = 'heart') AS heart_notes,
+             (SELECT GROUP_CONCAT(fn.note SEPARATOR ', ')
+              FROM fragrance_notes fn WHERE fn.product_id = p.id AND fn.layer = 'base') AS base_notes,
+             (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS min_variant_price,
+             (SELECT MAX(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS max_variant_price
+      FROM products p
+      LEFT JOIN brands         b  ON b.id  = p.brand_id
+      LEFT JOIN categories     c  ON c.id  = p.category_id
+      LEFT JOIN concentrations co ON co.id = p.concentration_id
+      WHERE p.is_active = 1
+      ORDER BY p.is_featured DESC, p.rating DESC
+      LIMIT 100
+    `)
+    return rows
+  } catch (err) {
+    // If fragrance_notes table doesn't exist, use simpler query without fragrance_notes
+    if (err.code === 'ER_NO_SUCH_TABLE' && err.message.includes('fragrance_notes')) {
+      console.warn('⚠️  fragrance_notes table unavailable, using simpler query')
+      const [rows] = await pool.query(`
+        SELECT p.id, p.name, p.price, p.old_price, p.description, p.gender,
+               p.image, p.rating, p.review_count, p.badge,
+               b.name AS brand,
+               c.name AS category,
+               co.name AS concentration,
+               '' AS top_notes,
+               '' AS heart_notes,
+               '' AS base_notes,
+               (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS min_variant_price,
+               (SELECT MAX(pv.price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS max_variant_price
+        FROM products p
+        LEFT JOIN brands         b  ON b.id  = p.brand_id
+        LEFT JOIN categories     c  ON c.id  = p.category_id
+        LEFT JOIN concentrations co ON co.id = p.concentration_id
+        WHERE p.is_active = 1
+        ORDER BY p.is_featured DESC, p.rating DESC
+        LIMIT 100
+      `)
+      return rows
+    }
+    throw err
+  }
 }
 
 // ── Format sản phẩm thành text cho system prompt ────────────────────────
@@ -878,7 +906,80 @@ async function fallbackSearch(message, mergedIntent = null) {
       }
   }
 
-  const [rows] = await pool.query(sql, params)
+  let rows
+  try {
+    [rows] = await pool.query(sql, params)
+  } catch (err) {
+    // If fragrance_notes table doesn't exist, use simpler query
+    if (err.code === 'ER_NO_SUCH_TABLE' && err.message.includes('fragrance_notes')) {
+      console.warn('⚠️  fragrance_notes table unavailable, using simpler query')
+      // Rebuild query without fragrance_notes subquery
+      let simpleSql = `
+        SELECT p.id, p.name, p.slug, p.price, p.old_price, p.image, p.badge,
+               p.rating, p.review_count, p.description, p.gender, p.is_featured, p.created_at,
+               b.name AS brand,
+               c.name AS category,
+               co.name AS concentration,
+               '' AS all_notes
+        FROM products p
+        LEFT JOIN brands         b  ON b.id  = p.brand_id
+        LEFT JOIN categories     c  ON c.id  = p.category_id
+        LEFT JOIN concentrations co ON co.id = p.concentration_id
+        WHERE p.is_active = 1
+      `
+      const simpleParams = []
+
+      if (intent.gender) {
+        simpleSql += ' AND p.gender = ?'
+        simpleParams.push(intent.gender)
+      }
+
+      if (intent.priceRange) {
+        simpleSql += ' AND p.price BETWEEN ? AND ?'
+        simpleParams.push(intent.priceRange[0], intent.priceRange[1])
+      }
+
+      if (intent.specialQuery === 'on_sale') {
+        simpleSql += ' AND p.old_price IS NOT NULL AND p.old_price > p.price'
+      }
+      if (intent.specialQuery === 'featured') {
+        simpleSql += ' AND p.is_featured = 1'
+      }
+
+      // Apply same ordering
+      switch (intent.specialQuery) {
+        case 'best_sellers':
+        case 'top_rated':
+          simpleSql += ' ORDER BY p.rating DESC, p.review_count DESC LIMIT 50'
+          break
+        case 'newest':
+          simpleSql += ' ORDER BY p.created_at DESC LIMIT 50'
+          break
+        case 'on_sale':
+          simpleSql += ' ORDER BY (p.old_price - p.price) DESC LIMIT 50'
+          break
+        case 'featured':
+          simpleSql += ' ORDER BY p.rating DESC LIMIT 50'
+          break
+        default:
+          const hasOnlyPrice = intent.priceRange && 
+                              !intent.gender && 
+                              !intent.occasion && 
+                              !intent.scents.length && 
+                              intent.searchTerms.length === 0
+          
+          if (hasOnlyPrice) {
+            simpleSql += ' ORDER BY p.price ASC, p.rating DESC LIMIT 50'
+          } else {
+            simpleSql += ' ORDER BY p.is_featured DESC, p.rating DESC LIMIT 50'
+          }
+      }
+
+      [rows] = await pool.query(simpleSql, simpleParams)
+    } else {
+      throw err
+    }
+  }
   
   // If no results found, return helpful message
   if (rows.length === 0) {

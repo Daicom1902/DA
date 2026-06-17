@@ -19,7 +19,7 @@ const ORDER_STATUS = {
 }
 const PAYMENT_METHOD = {
   cod:      { label: 'COD',              Icon: Truck    },
-  atm_card: { label: 'Thẻ ATM (VNPay)',  Icon: Landmark },
+  atm_card: { label: 'Thẻ ATM (MoMo)',   Icon: Landmark },
   vietqr:   { label: 'VietQR',           Icon: QrCode   },
 }
 const PAY_STATUS = {

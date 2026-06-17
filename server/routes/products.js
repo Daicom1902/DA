@@ -166,14 +166,24 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const product = rows[0]
 
     // Fragrance notes
-    const [notes] = await pool.query(
-      'SELECT layer, note FROM fragrance_notes WHERE product_id = ?',
-      [product.id]
-    )
     product.notes = {
-      top:   notes.filter(n => n.layer === 'top').map(n => n.note),
-      heart: notes.filter(n => n.layer === 'heart').map(n => n.note),
-      base:  notes.filter(n => n.layer === 'base').map(n => n.note),
+      top:   [],
+      heart: [],
+      base:  [],
+    }
+    try {
+      const [notes] = await pool.query(
+        'SELECT layer, note FROM fragrance_notes WHERE product_id = ?',
+        [product.id]
+      )
+      product.notes = {
+        top:   notes.filter(n => n.layer === 'top').map(n => n.note),
+        heart: notes.filter(n => n.layer === 'heart').map(n => n.note),
+        base:  notes.filter(n => n.layer === 'base').map(n => n.note),
+      }
+    } catch (err) {
+      // If fragrance_notes table doesn't exist or query fails, just use empty notes
+      console.warn('⚠️  fragrance_notes table unavailable, using empty notes')
     }
 
     // Gallery images
@@ -252,7 +262,17 @@ router.post('/:id/reviews', authMiddleware, async (req, res) => {
       [req.params.id, req.user.id, finalName, Number(rating), comment?.trim() || null]
     )
 
-    res.status(201).json({ message: 'Đánh giá đã được gửi và đang chờ duyệt' })
+    // Auto-recalculate product rating from all approved reviews
+    const [[stats]] = await pool.query(
+      'SELECT AVG(rating) AS avg_r, COUNT(*) AS cnt FROM reviews WHERE product_id = ? AND is_approved = 1',
+      [req.params.id]
+    )
+    await pool.query(
+      'UPDATE products SET rating = ?, review_count = ? WHERE id = ?',
+      [stats.avg_r ? Number(Number(stats.avg_r).toFixed(2)) : null, stats.cnt, req.params.id]
+    )
+
+    res.status(201).json({ message: 'Cảm ơn bạn đã đánh giá!' })
   } catch (err) {
     console.error(err)
     res.status(500).json({ message: 'Lỗi server' })
