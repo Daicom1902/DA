@@ -77,12 +77,6 @@ export const contactAPI = {
   delete:  (id)   => request(`/admin/contact/${id}`, { method: 'DELETE' }),
 }
 
-// ── Promo code ────────────────────────────────────────────────────────────
-export const promoAPI = {
-  validate: (code, subtotal) =>
-    request('/promo/validate', { method: 'POST', body: JSON.stringify({ code, subtotal }) }),
-}
-
 // ── Dashboard stats ───────────────────────────────────────────────────────
 export const dashboardAPI = {
   getStats: async () => {
